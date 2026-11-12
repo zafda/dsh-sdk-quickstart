@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex · dsh SDK 快速入门大纲计划</title>
+<style>
+:root{
+  --bg:#f6f6f3;--paper:#fff;--ink:#16181d;--ink2:#4b5260;--ink3:#8b929e;
+  --line:#e2e4e9;--accent:#2f6df6;--accent-soft:#eaf1ff;--warn:#b45309;--warn-soft:#fff7ed;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--radius:10px;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#12141a;--paper:#191c24;--ink:#e8eaf0;
+  --ink2:#a8b0c0;--ink3:#6f7889;--line:#282c37;--accent:#5b8dff;--accent-soft:#1c2437;
+  --warn:#f0a35e;--warn-soft:#2a2118;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px 96px}
+.back{display:inline-block;margin-bottom:20px;font-size:14px;color:var(--accent);
+  text-decoration:none;font-weight:600}
+.back:hover{text-decoration:underline}
+article{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:40px 44px}
+@media(max-width:720px){article{padding:26px 20px}}
+article>h1:first-child{font-size:27px;line-height:1.35;margin:0 0 22px}
+h2{font-size:21px;margin:38px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:28px 0 10px}
+h4{font-size:15.5px;margin:22px 0 8px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;
+  background:var(--paper);display:block;overflow-x:auto;white-space:normal}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--accent-soft);font-weight:650;font-size:13px}
+tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:.87em;background:var(--accent-soft);
+  padding:2px 6px;border-radius:5px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.62}
+pre code{background:none;padding:0;font-size:inherit}
+blockquote{margin:16px 0;padding:10px 18px;border-left:3px solid var(--line);
+  color:var(--ink2);background:var(--bg);border-radius:0 8px 8px 0}
+blockquote p{margin:6px 0}
+ul,ol{padding-left:24px}li{margin:5px 0}
+hr{border:none;border-top:1px solid var(--line);margin:32px 0}
+a{color:var(--accent)}
+footer{margin-top:32px;font-size:13px;color:var(--ink3);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="index.html">← 返回对比页</a>
+<article>
+<h1 id="deepseek-harnessdshsdk-快速入门大纲计划">DeepSeek Harness（dsh）SDK 快速入门：大纲计划</h1>
+<p>状态：待审核；本文件只规划教学内容、实验与验收，不含教材正文、示例代码或安装命令。</p>
+<p>建议路线：<strong>60 分钟建立可复述的模型，再用同一个「投放日报小助手」完成 L0–L4。动手预算 3 小时 50 分钟，合计 4 小时 50 分钟。</strong> 保留你建议的五阶段顺序；L3 的运行时兼容问题由作者在写作前解决。</p>
+<h2 id="1-教学范围与成品画面">1. 教学范围与成品画面</h2>
+<p>最终小应用拟只有一个本地页面：输入一个投放活动的问题，回答逐段出现，旁边显示工具调用及结束状态；工具从虚构的本地投放日报读取数据。模型请求经过本地网关，真 key 只由网关持有。</p>
+<p>只借 StaffDeck 的三个接口分界线：宿主如何指挥引擎、引擎如何请求模型、引擎如何调用业务工具。产品功能控制在单用户、单次在途任务、一个只读工具、一种上游模型协议；不引入员工管理、SOP、多租户、数据库、进程池或桌面打包。</p>
+<p>教学默认条件：macOS 14+ arm64；Linux x64/arm64 给出对应说明；Python ≥3.10。Windows 不进入本路线。默认读者能读改基本 Python，但没接触过 dsh SDK；这项假设列入末尾待拍板项。</p>
+<p>每章采用同一讲解顺序：<strong>先预告要看到的画面 → 解释参与者各管什么 → 挂上本章需要的真实名称 → 用一句话复述。</strong> 动手章再补完整运行步骤、预期现象、失败时的处理和一个小改动练习。上述内容均留待审核通过后撰写。</p>
+<h2 id="2-第一部分60-分钟速览的章节和时间分配">2. 第一部分：60 分钟速览的章节和时间分配</h2>
+<p>分钟包含阅读、看图、阅读必要的官方示例和复述；不要求在这一小时内安装或排障。预计正文约 3,400 中文字，图注、必要示例及自测另计，但仍纳入 60 分钟预算；延伸材料不算必读。</p>
+<table>
+<thead>
+<tr>
+<th>章节标题</th>
+<th>一句话说什么</th>
+<th style="text-align: right;">预计正文篇幅</th>
+<th>时间段 / 用时</th>
+<th>学完能回答的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1 从一句投放问题，看见整台机器</td>
+<td>用未来小应用的一次请求标出宿主、SDK、引擎、模型和工具各自的责任。</td>
+<td style="text-align: right;">300 字</td>
+<td>0–5′ / 5 分钟</td>
+<td>哪些工作由我的程序负责，哪些交给 dsh？SDK 和我已知的产品入口是什么关系？</td>
+</tr>
+<tr>
+<td>A2 插件树怎样成为一个能运行的程序</td>
+<td>以已知的插件树为起点，补齐 profile、bundle、patch 与 SDK 独立组合文件之间的关系。</td>
+<td style="text-align: right;">450 字</td>
+<td>5–13′ / 8 分钟</td>
+<td>改一份配置是在换能力还是换界面？安装 SDK 是否意味着启动现有桌面版或某个本机 profile？</td>
+</tr>
+<tr>
+<td>A3 Python 发出一句话之后发生什么</td>
+<td>沿官方最小示例讲清跨进程控制、引擎生命周期、工作目录、会话目录和返回结果。</td>
+<td style="text-align: right;">650 字</td>
+<td>13–25′ / 12 分钟</td>
+<td>谁启动和关闭引擎？复用会话与开启新会话有什么区别？回复和记录分别去哪里找？</td>
+</tr>
+<tr>
+<td>A4 从最终回复退回到事件发生现场</td>
+<td>用一次「提问—模型输出—工具执行—再次输出」区分通知、持久事件、增量文本和最终结果。</td>
+<td style="text-align: right;">650 字</td>
+<td>25–37′ / 12 分钟</td>
+<td>界面为什么不必等最后结果？一次工具调用为何可能带来多个模型步骤？如何区分根会话和子会话？</td>
+</tr>
+<tr>
+<td>A5 谁允许模型动手，自己的工具接在哪里</td>
+<td>先看最小组合暴露的工具，再把 MCP 接入和工具执行管线放到同一画面中。</td>
+<td style="text-align: right;">600 字</td>
+<td>37–47′ / 10 分钟</td>
+<td>自己的 MCP server 怎样变成模型可用的工具？提示词限制、移除工具和操作系统隔离分别管什么？</td>
+</tr>
+<tr>
+<td>A6 模型接口为什么要留在自己手里</td>
+<td>对照 StaffDeck 的模型网关说明凭据归属、激活凭据生命周期和流式转发。</td>
+<td style="text-align: right;">500 字</td>
+<td>47–55′ / 8 分钟</td>
+<td>引擎没有真 key，为什么仍能调用模型？本地网关和新写一个模型适配器有什么区别？</td>
+</tr>
+<tr>
+<td>A7 合上材料，自己讲一遍</td>
+<td>用五个问题和一张空白请求路线图检查理解，并标出对应动手阶段。</td>
+<td style="text-align: right;">250 字</td>
+<td>55–60′ / 5 分钟</td>
+<td>能否独立讲清三个接口、一次请求经过的进程、界面数据来源、工具边界和真 key 所在位置？</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>从产品画面进入必要细节，不重复铺陈已掌握的插件树知识。</strong></td>
+<td style="text-align: right;"><strong>3,400 字</strong></td>
+<td><strong>60 分钟</strong></td>
+<td><strong>能复述，也知道下一步从哪里动手。</strong></td>
+</tr>
+</tbody>
+</table>
+<p>图示计划控制为三种：整体请求路线图、配置叠加小图、事件时序图。L4 在整体路线图上补入网关与凭据位置；不另造多套分层名词。</p>
+<p>A2 会专门区分：官方架构中 profile 使用的公共 bundle，与 Python SDK 捆绑运行时按独立配置启动的组合。不会把「共享架构与能力」讲成「SDK 每次都会启动本机的完整公共 bundle」。</p>
+<h2 id="3-第二部分同一个项目连续长大">3. 第二部分：同一个项目连续长大</h2>
+<h3 id="31-动手章节与篇幅预算">3.1 动手章节与篇幅预算</h3>
+<table>
+<thead>
+<tr>
+<th>章节标题</th>
+<th>一句话说什么</th>
+<th style="text-align: right;">预计说明文字</th>
+<th style="text-align: right;">实操时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B0 开跑前：准备独立实验目录</td>
+<td>确认平台、运行时和实验数据位置，点明最小组合的真实权限。</td>
+<td style="text-align: right;">300–450 字</td>
+<td style="text-align: right;">并入 L0</td>
+</tr>
+<tr>
+<td>B1 / L0 让它先回一句 hello</td>
+<td>安装 SDK 并建立后续一直保留的 Python 调用入口。</td>
+<td style="text-align: right;">500–700 字</td>
+<td style="text-align: right;">25 分钟</td>
+</tr>
+<tr>
+<td>B2 / L1 看见引擎正在做什么</td>
+<td>在同一个入口上增加通知观察，把一次任务拆成可见的事件。</td>
+<td style="text-align: right;">600–800 字</td>
+<td style="text-align: right;">25 分钟</td>
+</tr>
+<tr>
+<td>B3 / L2 让同一条事件流长出界面</td>
+<td>给已有调用入口增加本地 HTTP 服务和 SSE 页面。</td>
+<td style="text-align: right;">800–1,000 字</td>
+<td style="text-align: right;">45 分钟</td>
+</tr>
+<tr>
+<td>B4 / L3 只准调用我们的投放工具</td>
+<td>保留界面和事件流，更换工具组合，挂上自己的只读 MCP server。</td>
+<td style="text-align: right;">800–1,000 字</td>
+<td style="text-align: right;">45 分钟</td>
+</tr>
+<tr>
+<td>B5 / L4 让真 key 只留在网关</td>
+<td>保留业务与界面，通过本地模型网关完成凭据分离。</td>
+<td style="text-align: right;">1,000–1,300 字</td>
+<td style="text-align: right;">55 分钟</td>
+</tr>
+<tr>
+<td>B6 从屏幕现象复述三个接口</td>
+<td>用完整应用验收清单把五阶段串起来。</td>
+<td style="text-align: right;">250–350 字</td>
+<td style="text-align: right;">并入 L4</td>
+</tr>
+<tr>
+<td>附录：出错时按现象找入口</td>
+<td>收拢平台、加载配置、工具发现、流式中断和凭据错误的排查入口。</td>
+<td style="text-align: right;">600–900 字</td>
+<td style="text-align: right;">按需；预留排障时间</td>
+</tr>
+</tbody>
+</table>
+<p>正文将为每一阶段提供完整可运行快照，以及相对上一阶段的改动说明。它们属于同一个项目的阶段版本；调用入口、会话目录、实验目录和任务主题保持连续，不创建五个独立 demo。</p>
+<p>切换工具组合后新开会话，旧日志保留供对照；项目连续增长，不要求把五阶段强塞进同一条对话历史。</p>
+<p>源码体量按<strong>非空应用源码行</strong>估算，包含 Python 和前端标记/脚本，不含注释、虚构数据及官方配置。配置单独计量，避免把复制官方配置藏进「十几行就能做完」的说法里。以下均是规划估算，尚未通过实现测量。</p>
+<h3 id="32-l0跑通-hello留下第一份会话记录">3.2 L0：跑通 hello，留下第一份会话记录</h3>
+<ul>
+<li><strong>目标：</strong> 在独立实验目录安装 SDK，使用官方最小组合跑通一句 hello；建立后续复用的调用入口，并备好小份虚构投放日报。</li>
+<li><strong>屏幕现象：</strong> 终端出现模型回复和会话标识；指定的会话目录下出现 JSONL 记录；程序正常退出后，引擎子进程被关闭。回复与记录都能定位到本次任务。</li>
+<li><strong>代码预算：</strong> 应用源码新增 25–35 行，累计 25–35 行；另有约 80–110 行官方最小组合配置，后续逐步删减。</li>
+<li><strong>概念位置：</strong> 宿主通过 Python SDK 走控制面驱动引擎；模型面暂用直接连接，工具面暂保留官方最小组合。</li>
+<li><strong>实操 25 分钟：</strong> 环境与安装 10 分钟，调用与运行 10 分钟，查看记录与复述 5 分钟。</li>
+<li><strong>验收与小改动：</strong> 能把输入换成自己的问候再跑一次；能说明工作目录和会话目录为什么不同。复用和更换会话标识各做一次对照。</li>
+<li><strong>开跑前必须说清：</strong> <code>minimal.cordis.yml</code> 使用 <code>danger-full-access</code>；Bash 和编辑器能改运行进程有权限访问的任何路径。所有阶段均在专门的 <code>work/</code> 实验目录运行，只放虚构资料；独立目录方便控制实验内容，<strong>本身不是沙箱</strong>。不能把配置中的 <code>cwd</code> 讲成访问范围限制。</li>
+</ul>
+<h3 id="33-l1看见真实事件流">3.3 L1：看见真实事件流</h3>
+<ul>
+<li><strong>目标：</strong> 在 L0 的调用入口增加通知观察，不等最终结果才展示过程；让模型查看实验目录内的样例文件，制造一次可观察的工具调用。</li>
+<li><strong>屏幕现象：</strong> 终端按实际到达顺序显示回合、步骤、增量回复、工具调用与结果；任务进入空闲后，再显示最终回复和结束原因。无工具的 hello 与有工具的任务能看出差别。</li>
+<li><strong>代码预算：</strong> 新增 25–35 行，累计 50–70 行；沿用 L0 配置。</li>
+<li><strong>概念位置：</strong> 控制面上的实时通知承载引擎事件，会话日志保存可回看的事实；它们将成为 L2 界面的数据源。</li>
+<li><strong>实操 25 分钟：</strong> 观察入口 10 分钟，两类任务对照 10 分钟，复述与小改动 5 分钟。</li>
+<li><strong>验收与小改动：</strong> 只展示文字增量，再切回完整事件视图；指出工具发生在哪两个模型步骤之间。不会把「每个任务必有工具调用」写成保证。</li>
+</ul>
+<p>写作时会解释通知范围与根会话事件集合的区别；主线不增加子代理实验，也不为展示复杂性额外加载子代理工具。</p>
+<h3 id="34-l2同一份调用入口长出-sse-界面">3.4 L2：同一份调用入口长出 SSE 界面</h3>
+<ul>
+<li><strong>目标：</strong> 给已有调用入口增加轻量 Python HTTP 后端和原生 HTML/JavaScript 页面，将回调中的通知经队列转成浏览器 SSE 流。</li>
+<li><strong>屏幕现象：</strong> 点击发送后，完整任务结束前就能看到真实增量文本；工具执行状态独立显示；结束后页面恢复可发送状态。故意造成一次请求失败时，页面能显示错误并结束等待。</li>
+<li><strong>代码预算：</strong> 新增 110–150 行，累计 160–220 行，含约 50–70 行页面代码；不引入前端构建链。</li>
+<li><strong>概念位置：</strong> 浏览器—宿主新增一条界面传输线；宿主—引擎仍走 stdio JSON-RPC。SSE 不是给引擎换协议，也不是把模型网关直接暴露给浏览器。</li>
+<li><strong>实操 45 分钟：</strong> 后端与队列 15 分钟，页面 15 分钟，流式及异常验收 10 分钟，复述 5 分钟。</li>
+<li><strong>验收与小改动：</strong> 改变提问使回答变长，确认输出发生在任务结束之前；切换事件区的显示。最终消息不能再次追加一遍，造成文字重复。</li>
+</ul>
+<p>实施约束：同步 SDK 调用放在后台执行，不能阻塞 HTTP 服务；页面只接收需要展示的内容，不把全部原始通知、请求头和模型请求正文转发到前端。每次只允许一个任务在途。浏览器断开后要结束相关工作并清理引擎，不能把连接关闭写成官方支持的逐会话取消接口。</p>
+<h3 id="35-l3只挂自己的-mcp-投放工具">3.5 L3：只挂自己的 MCP 投放工具</h3>
+<ul>
+<li><strong>目标：</strong> 保留 L2 页面、事件展示与 SDK 调用入口；移除最小组合中暴露给模型的 Bash 和编辑器，挂入自己的本地 MCP server，提供一个只读投放日报查询工具。</li>
+<li><strong>屏幕现象：</strong> 同一页面出现带服务器命名空间的 MCP 工具调用及结果；回答引用虚构日报中的数据。检查实际发往模型的工具清单，确认只剩自定义工具，原先的 Bash 和编辑器已不再暴露。</li>
+<li><strong>代码预算：</strong> 新增 70–100 行，累计 230–320 行；配置删掉不再需要的工具行，补入 MCP 连接配置。配置的行数变化另列，不算应用源码。</li>
+<li><strong>概念位置：</strong> 工具面换了提供方，控制面和界面传输线保持原有职责；模型仍由 dsh 负责选择工具并继续后续步骤。工具只读固定实验资料，不接受任意文件路径或命令。</li>
+<li><strong>实操 45 分钟：</strong> 运行时及连接检查 10 分钟，工具和组合调整 15 分钟，工具清单与执行验收 15 分钟，复述 5 分钟。</li>
+<li><strong>验收与小改动：</strong> 修改一份虚构日报中的数据，再提问观察结果变化；关闭 MCP 服务做一次失败对照。不能只凭模型说「没有 Bash」来验收工具已移除。</li>
+</ul>
+<p>连接方式拟采用与 StaffDeck 一致的 Streamable HTTP；MCP 服务由本地后端承载，避免多部署一个业务服务。SDK 的阻塞调用继续在后台执行，以保证工具请求能被宿主正常处理。</p>
+<p><strong>已发现的运行时卡点：</strong> 官方源码的 SDK runtime 依赖清单没有直接列出 <code>@deepseek-ai/dsh-mcp-client</code>；对应单文件入口把包名解析到自身封闭的运行时树。不能据此承诺「给 wheel 加一行配置就能加载 MCP」。</p>
+<p>拟定处理顺序：作者先核验目标发行版的实际插件可用性；若捆绑运行时不可加载，则优先验证官方通用 <code>dsh-jsonrpc-agent</code> 入口和项目内插件依赖，通过当前 SDK 的 <code>launch_args_override</code> 选择运行时。保持原有应用调用入口，只更换运行载体和配置；不沿用 StaffDeck 的旧版启动参数。</p>
+<p>上述备用路线已有官方文件依据，但本轮未安装或运行验证。正式教材必须只留下作者实跑通过的一条路线，并把新增安装成本计入本阶段；如果完整路线不能落入本预算，先修订计划供审核，不把编译整个仓库留作读者隐含作业。</p>
+<h3 id="36-l4真-key-只留在独立模型网关">3.6 L4：真 key 只留在独立模型网关</h3>
+<ul>
+<li><strong>目标：</strong> 保留页面和自定义工具，将模型请求改经本机 OpenAI 兼容网关；网关持有真 key，引擎只拿到一次任务的 activation token。</li>
+<li><strong>屏幕现象：</strong> 页面仍可流式回答并调用工具；网关只显示脱敏请求记录；引擎启动环境与组合配置的检查结果显示没有真 key；任务结束后，旧 token 再发请求会被拒绝。</li>
+<li><strong>代码预算：</strong> 新增 140–190 行，累计 370–510 行；最终组合配置预计另有 35–60 行，虚构数据另计。</li>
+<li><strong>概念位置：</strong> 模型面被换成本地受控出口，控制面和工具面继续保留。这里先做同协议流式转发，不编写新的 dsh 模型适配器，不实现 StaffDeck 的多协议转换。</li>
+<li><strong>实操 55 分钟：</strong> 网关及转发 20 分钟，凭据生命周期与干净启动 15 分钟，端到端及失效验收 15 分钟，复述 5 分钟。</li>
+<li><strong>验收与小改动：</strong> 完成一次至少调用一个工具的任务，确认同一任务内多次模型请求都能成功；任务结束后旧 token 失效。修改虚构日报后重跑，确认 L2 的流式和 L3 的工具仍然工作。</li>
+</ul>
+<p>本阶段拟用最小生命周期：一次用户任务创建一个新引擎和一个新 token，任务结束撤销 token 并关闭引擎。这里的「一次性」指一次任务的授权生命周期，不能解释成只允许一次 HTTP 请求；一个工具回合通常需要继续请求模型。StaffDeck 源码还有进程池复用和阶段重绑定，作为边注说明，不要求复刻。</p>
+<p>真 key 拟由独立网关进程通过隐藏输入读取并仅保存在内存中；应用后端与引擎从不含真 key 的环境重新启动。L0–L3 已经继承过凭据的旧进程必须退出。不会声称仅改变模型地址就自动完成凭据隔离。</p>
+<p>写作时还会覆盖两个实际来源：Python SDK 的 <code>env</code> 是合并父环境，并非替换；运行入口还会读取工作目录中的 <code>.env</code>。因此运行目录不放含真 key 的配置文件，也不能只覆盖一个变量后就宣称检查通过。凭据检查只输出是否存在，不打印真值；本实验验证凭据不被传入引擎，不扩张成操作系统级的恶意进程隔离承诺。</p>
+<h2 id="4-一晚上时间账">4. 一晚上时间账</h2>
+<p>以下是读者拿到完整教材后跟做的墙钟时间，包含正常安装、模型等待、观察、改动和复述；不是作者自行从零编写教材与调试的时间。</p>
+<table>
+<thead>
+<tr>
+<th>顺序</th>
+<th style="text-align: right;">用时</th>
+<th style="text-align: right;">累计</th>
+<th>安排</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一部分速览</td>
+<td style="text-align: right;">60 分钟</td>
+<td style="text-align: right;">60 分钟</td>
+<td>阅读并完成复述自测</td>
+</tr>
+<tr>
+<td>L0</td>
+<td style="text-align: right;">25 分钟</td>
+<td style="text-align: right;">85 分钟</td>
+<td>安装、hello、会话记录</td>
+</tr>
+<tr>
+<td>L1</td>
+<td style="text-align: right;">25 分钟</td>
+<td style="text-align: right;">110 分钟</td>
+<td>事件流与工具现象</td>
+</tr>
+<tr>
+<td>L2</td>
+<td style="text-align: right;">45 分钟</td>
+<td style="text-align: right;">155 分钟</td>
+<td>本地页面、SSE 与错误收尾</td>
+</tr>
+<tr>
+<td>休息</td>
+<td style="text-align: right;">10 分钟</td>
+<td style="text-align: right;">165 分钟</td>
+<td>固定预算</td>
+</tr>
+<tr>
+<td>L3</td>
+<td style="text-align: right;">45 分钟</td>
+<td style="text-align: right;">210 分钟</td>
+<td>自定义 MCP 工具与工具清单检查</td>
+</tr>
+<tr>
+<td>L4</td>
+<td style="text-align: right;">55 分钟</td>
+<td style="text-align: right;">265 分钟</td>
+<td>网关、token、凭据分离与总验收</td>
+</tr>
+<tr>
+<td>排障机动</td>
+<td style="text-align: right;">25 分钟</td>
+<td style="text-align: right;"><strong>290 分钟</strong></td>
+<td>wheel/插件加载、模型接入与连接问题</td>
+</tr>
+</tbody>
+</table>
+<p>例如 19:00 开始，目标 23:50 完成；若速览提前读完，动手当晚需 230 分钟。五阶段实操合计 195 分钟，加休息和机动为 230 分钟。</p>
+<p>成立条件：官方运行依赖能正常获取，模型账号已有可用额度，读者具备基本 Python 阅读能力，作者已解决 L3 的运行时加载问题。不以首次源码构建、学习 Python 基础或调试公司私有模型协议作为本预算的隐含前置任务。</p>
+<p>如必须压到更短的一晚，优先把速览提前阅读、删掉可选改动练习；五阶段终态要求保持完整，不把 MCP 或真 key 分离留到读者自行补完。</p>
+<h2 id="5-写正文前的作者验证与交付纪律">5. 写正文前的作者验证与交付纪律</h2>
+<p>本轮做的是文档和源码静态核对，<strong>没有安装 SDK、调用付费模型或完成 L0–L4 实跑</strong>。阶段现象都是后续教材必须验证的目标，不能标注为本轮实测结果。</p>
+<p>审核通过后的写作顺序拟为：先确定一致的 SDK/运行时版本 → 解决 MCP 加载 → 在本地逐阶段完成同一项目 → 记录真实终端与页面现象 → 再写教程。官方仓库始终只读，不在其上安装、构建或运行教学应用。</p>
+<table>
+<thead>
+<tr>
+<th>必须先完成的验证</th>
+<th>通过标准</th>
+<th>责任归属</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>发行版与源码对齐</td>
+<td>为选定版本核对构造参数、运行结果、通知形状、捆绑插件和平台；没有混用不同版本的启动接口。</td>
+<td>作者查证，不让用户判断 API</td>
+</tr>
+<tr>
+<td>MCP 加载与工具收敛</td>
+<td>选定载体确实能加载自己的 MCP server；模型工具清单只含计划中的工具。</td>
+<td>作者实跑，不留给读者摸索</td>
+</tr>
+<tr>
+<td>真正的增量输出</td>
+<td>文本在任务结束前到达浏览器；最终结果不重复追加；错误和断开有收尾。</td>
+<td>作者端到端验收</td>
+</tr>
+<tr>
+<td>凭据分离</td>
+<td>干净启动环境、运行目录、传输与日志均不向引擎交付真 key；任务有效期内 token 可支持多步，结束后失效。</td>
+<td>作者验收</td>
+</tr>
+<tr>
+<td>一晚预算</td>
+<td>从空实验目录按最终步骤走通；记录实际耗时和最终行数，超预算先缩减非必要范围。</td>
+<td>作者完整复跑</td>
+</tr>
+</tbody>
+</table>
+<p>最终正文会明确标识三种依据：官方文档明确描述、源码静态核对、作者本地运行观察。教学选择写作「本教程采用」，不伪装成 SDK 内置功能；所有必要代码、配置、启动和退出步骤在教材中给全。</p>
+<h2 id="6-引用文件地图与本轮核对边界">6. 引用文件地图与本轮核对边界</h2>
+<h3 id="61-官方文件取自-官方仓库">6.1 官方文件：取自 官方仓库</h3>
+<p>只读位置：官方仓库 <code>deepseek-ai/deepseek-harness</code>。本轮读取的提交标识为 <code>47f943859bef60e4160492346772ded9b24f765a</code>；这里只作为资料版本记录，不拿源码行号代替教学成果。下表均为本轮实际读取的文件路径。</p>
+<table>
+<thead>
+<tr>
+<th>官方文件</th>
+<th>拟用于哪一部分 / 回答什么问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/user/guide/python-sdk.md</code></td>
+<td>A3、B0、L0：安装、平台、最小调用、工作目录、持久会话和权限提醒。</td>
+</tr>
+<tr>
+<td><code>python/sdk/README.md</code></td>
+<td>A3–A4、L0–L2：生命周期、结果语义、通知范围、默认组合与自选配置。</td>
+</tr>
+<tr>
+<td><code>examples/jsonrpc-agent/README.md</code></td>
+<td>A3、A5、L0、L3：两份示例组合的工具清单和环境约定。</td>
+</tr>
+<tr>
+<td><code>examples/jsonrpc-agent/minimal.py</code></td>
+<td>A3、L0：真实的 Python SDK 最小调用入口。</td>
+</tr>
+<tr>
+<td><code>examples/jsonrpc-agent/minimal.cordis.yml</code></td>
+<td>A2、A5、L0–L3：最小组合、持久 Bash、编辑器、日志以及危险权限。</td>
+</tr>
+<tr>
+<td><code>examples/jsonrpc-agent/cordis.yml</code></td>
+<td>A2、A5：对照较完整编码组合；不要求读者完整复刻。</td>
+</tr>
+<tr>
+<td><code>docs/architecture.md</code></td>
+<td>A1–A2、A4：profile/bundle/patch、核心职责、步骤与回合、持久事件。</td>
+</tr>
+<tr>
+<td><code>docs/cordis-primer.md</code></td>
+<td>A2：插件、服务、依赖与配置，只引入后续操作需要的部分。</td>
+</tr>
+<tr>
+<td><code>docs/tool-execution-pipeline.md</code></td>
+<td>A5、L3：工具调用、策略、执行和结果的位置关系。</td>
+</tr>
+<tr>
+<td><code>docs/cookbook/adding-a-tool.md</code></td>
+<td>A5 和延伸阅读：说明原生工具扩展的位置；主线仍采用 MCP，不插入 TypeScript 插件开发课。</td>
+</tr>
+<tr>
+<td><code>docs/cookbook/adding-an-llm-adapter.md</code></td>
+<td>A6 和延伸阅读：界定模型适配器与本地同协议网关的不同责任。</td>
+</tr>
+<tr>
+<td><code>packages/mcp/mcp-client/README.md</code></td>
+<td>L3：MCP 配置、工具命名、连接启动与工具发现行为。</td>
+</tr>
+<tr>
+<td><code>packages/llm/llm-deepseek/README.md</code></td>
+<td>A6、L4：模型路由、兼容地址、凭据引用及流式请求约定。</td>
+</tr>
+<tr>
+<td><code>packages/sdk/protocol/README.md</code>、<code>packages/sdk/protocol/src/types.ts</code></td>
+<td>A3–A4、L1–L2：stdio 协议方法、通知与实际负载；明确没有逐任务取消方法。</td>
+</tr>
+<tr>
+<td><code>packages/sdk/server/README.md</code></td>
+<td>A3、L2：stdout 只承载协议、关闭与通知行为。</td>
+</tr>
+<tr>
+<td><code>python/sdk/src/deepseek_harness/api.py</code>、<code>models.py</code>、<code>client.py</code></td>
+<td>A3–A4、L1–L4：核对真实参数、结果、通知、环境合并和运行时选择。后两项与前者位于同一目录。</td>
+</tr>
+<tr>
+<td><code>packages/core/session/src/types.ts</code>、<code>packages/llm/llm/src/types.ts</code></td>
+<td>L1–L2：核对会话事件与增量文本形状，不在正文展开完整类型目录。</td>
+</tr>
+<tr>
+<td><code>python/sdk/pyproject.toml</code>、<code>python/sdk-runtime/platforms.json</code>、<code>python/sdk-runtime/README.md</code></td>
+<td>B0、L0：包名、Python 要求、平台 wheel、捆绑运行时的边界。</td>
+</tr>
+<tr>
+<td><code>python/sdk-runtime/package.json</code></td>
+<td>L3 写作前检查：核对捆绑运行时依赖，避免假设任何插件都已内置。</td>
+</tr>
+<tr>
+<td><code>packages/examples/jsonrpc-demo/README.md</code>、<code>package.json</code>、<code>src/runner.ts</code>、<code>src/packaged-bin.ts</code></td>
+<td>L3 载体选择：通用入口与封闭入口的模块解析区别；补全后续安装验证。后三项与前者位于同一目录。</td>
+</tr>
+<tr>
+<td><code>packages/boot/app-boot/src/index.ts</code></td>
+<td>L4：运行入口的 <code>.env</code> 读取行为，防止真 key 从文件重新进入引擎。</td>
+</tr>
+<tr>
+<td><code>python/development.md</code></td>
+<td>作者验证及延伸阅读：版本构建规则和开发运行载体，不把贡献者构建流程塞进 L0。</td>
+</tr>
+<tr>
+<td><code>package.json</code>、<code>LICENSE</code></td>
+<td>资料版本记录及官方仓库 MIT 许可。</td>
+</tr>
+</tbody>
+</table>
+<p>引用按问题和路径组织，不列源码行号；正式材料中文表述优先对照相应 <code>.zh.md</code>，技术名称以选定版本的接口为准。</p>
+<h3 id="62-本轮已核对可以进入规划的名称">6.2 本轮已核对、可以进入规划的名称</h3>
+<p>以下名称都已从上述 官方文件核对；此处只固定引用边界，不展开 API 教材。</p>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>已核对名称</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>安装与导入</td>
+<td>发行包 <code>deepseek-harness-sdk</code>；导入模块 <code>deepseek_harness</code>；捆绑运行时包 <code>deepseek-harness-runtime-bin</code>；Python ≥3.10。</td>
+</tr>
+<tr>
+<td>主调用入口</td>
+<td><code>DeepSeekHarness</code> 的 <code>provider</code>、<code>model</code>、<code>max_tokens</code>、<code>cwd</code>、<code>session_root</code>、<code>cordis</code>；<code>.run(input, session_id=, on_notification=)</code>。</td>
+</tr>
+<tr>
+<td>返回结果</td>
+<td><code>RunResult</code>：<code>session_id</code>、<code>final_response</code>、<code>finish_reason</code>、<code>events</code>、<code>notifications</code>、<code>session_root</code>。</td>
+</tr>
+<tr>
+<td>通知与事件</td>
+<td><code>Notification.method</code>、<code>Notification.payload</code>；<code>session.event</code>、<code>session.status</code>；<code>turn/start</code>、<code>turn/end</code>、<code>step/start</code>、<code>step/end</code>、<code>assistant/chunk</code>、<code>assistant/message</code>、<code>tool/call</code>、<code>tool/result</code>；文字增量类型 <code>text-delta</code>。</td>
+</tr>
+<tr>
+<td>控制面协议</td>
+<td><code>initialize</code>、<code>session/prompt</code>、<code>shutdown</code>；保留配置中的 <code>@deepseek-ai/dsh-sdk-jsonrpc-server</code>。</td>
+</tr>
+<tr>
+<td>模型面接入</td>
+<td><code>DEEPSEEK_BASE_URL</code>、<code>DEEPSEEK_API_KEY</code>；适配器配置 <code>baseURL</code>、<code>apiKeyEnv</code>；已注册路由 <code>deepseek-official</code>。</td>
+</tr>
+<tr>
+<td>工具面接入</td>
+<td><code>@deepseek-ai/dsh-mcp-client</code>；<code>serverName</code>、<code>transport</code>、<code>url</code>、<code>headers</code>、<code>failOnStartupError</code>；<code>streamable-http</code>；工具名形状 <code>mcp__&lt;serverName&gt;__&lt;rawName&gt;</code>。</td>
+</tr>
+<tr>
+<td>运行载体与环境</td>
+<td><code>launch_args_override</code>、<code>env</code>、<code>DSH_CORDIS_CONFIG</code>；通用运行入口 <code>dsh-jsonrpc-agent</code>。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>版本核对的限度：</strong> 你提供的发行基线 <code>0.2.2rc2</code> 保留为计划目标，不凭记忆改写。本轮源码仓库根 <code>package.json</code> 的版本却是 <code>0.1.0-rc.5</code>，Python SDK 源码项目元数据是构建占位值 <code>0.0.0.dev0</code>；官方构建说明表示发行版本在构建时注入。因此本轮源码读取不能再次证明 PyPI「最新」版本，也不能据此把目标发行版的插件清单说成已验证。版本与运行时对齐属于下一轮作者验证工作，不需要你替作者拍板技术事实。</p>
+<h3 id="63-staffdeck只引用三个边界及其版本差异">6.3 StaffDeck：只引用三个边界及其版本差异</h3>
+<p>本轮读取了本地已有的 <code>OpenBMB/StaffDeck</code> 源码，位置为 本地克隆的 <code>OpenBMB/StaffDeck</code>，提交 <code>fcc28c003ef188e6d0a11596d44fdfb3723b275b</code>。它不是 官方 dsh 文档；所有教学用 dsh API 名称仍以 官方文件核对为依据。</p>
+<table>
+<thead>
+<tr>
+<th>StaffDeck 文件</th>
+<th>借鉴内容</th>
+<th>教学缩小方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend/src/staffdeck_harness/bridge/worker.py</code></td>
+<td>用官方 Python 客户端驱动 stdio 引擎、禁用原生工具、挂 MCP、指向本地模型网关。</td>
+<td>保留三条接口线；当前 API 重新接，不搬旧启动配置。</td>
+</tr>
+<tr>
+<td><code>backend/src/staffdeck_harness/bridge/model_gateway.py</code></td>
+<td>网关按活跃授权查找模型配置、持有真凭据并转发模型流。</td>
+<td>只做一个上游协议和流式转发。</td>
+</tr>
+<tr>
+<td><code>backend/src/staffdeck_harness/bridge/capability_mcp.py</code></td>
+<td>本地 Streamable HTTP MCP server、按激活凭据找能力、失效后拒绝访问。</td>
+<td>只暴露一个只读业务工具。</td>
+</tr>
+<tr>
+<td><code>backend/src/staffdeck_harness/bridge/task_agent.py</code></td>
+<td>引擎拿到的是激活凭据；进程复用时重新绑定当前任务能力。</td>
+<td>不做暖池；一个任务一个新引擎和新 token，结束统一撤销。</td>
+</tr>
+</tbody>
+</table>
+<p>源码表明 StaffDeck 的 token 也能随池中进程保留、在阶段间重新绑定；所以正文不会把它描述为「每个 HTTP 请求只能用一次」。不会把旧版控制面的能力限制直接当作当前 SDK 的事实；相关限制须由当前官方协议文件再次确认。</p>
+<h2 id="7-需要你拍板的点3-条">7. 需要你拍板的点（3 条）</h2>
+<p>只需确认会改变教学体量的选择；API 与运行时兼容性由作者负责查证。审核通过前不开始写正文或实现应用。</p>
+<table>
+<thead>
+<tr>
+<th>待定问题</th>
+<th>建议选择</th>
+<th>另一选择及影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一遍用官方 DeepSeek 服务，还是必须接公司已有的兼容模型服务？</td>
+<td>先用官方服务走通，减少协议差异；本轮无需提供 key。</td>
+<td>若必须用公司服务，下一轮先确认模型及兼容行为，再锁定网关实验；可能需要调整排障预算。</td>
+</tr>
+<tr>
+<td>页面是否接受原生 HTML/JavaScript，暂不采用 React？</td>
+<td>接受原生页面，把时间留给 SDK、MCP 与网关。</td>
+<td>若必须 React，增加构建链与界面接线，预计多 20–30 分钟，需要重排一晚预算。</td>
+</tr>
+<tr>
+<td>你是否能阅读并修改基本 Python，例如函数、字典和虚拟环境的使用？</td>
+<td>能；按当前 4 小时 50 分钟完整路线安排。</td>
+<td>若需要从 Python 基础开始，另加 20–30 分钟前置页，建议提前完成速览和基础准备，动手当晚预算保持不变。</td>
+</tr>
+</tbody>
+</table>
+</article>
+<footer>本页由 Markdown 生成。发布版已移除内部机器名与本地绝对路径，其余内容保持原始产出。</footer>
+</div>
+</body>
+</html>

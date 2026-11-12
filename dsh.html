@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dsh · dsh SDK 教学规划</title>
+<style>
+:root{
+  --bg:#f6f6f3;--paper:#fff;--ink:#16181d;--ink2:#4b5260;--ink3:#8b929e;
+  --line:#e2e4e9;--accent:#2f6df6;--accent-soft:#eaf1ff;--warn:#b45309;--warn-soft:#fff7ed;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--radius:10px;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#12141a;--paper:#191c24;--ink:#e8eaf0;
+  --ink2:#a8b0c0;--ink3:#6f7889;--line:#282c37;--accent:#5b8dff;--accent-soft:#1c2437;
+  --warn:#f0a35e;--warn-soft:#2a2118;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px 96px}
+.back{display:inline-block;margin-bottom:20px;font-size:14px;color:var(--accent);
+  text-decoration:none;font-weight:600}
+.back:hover{text-decoration:underline}
+article{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:40px 44px}
+@media(max-width:720px){article{padding:26px 20px}}
+article>h1:first-child{font-size:27px;line-height:1.35;margin:0 0 22px}
+h2{font-size:21px;margin:38px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:28px 0 10px}
+h4{font-size:15.5px;margin:22px 0 8px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;
+  background:var(--paper);display:block;overflow-x:auto;white-space:normal}
+th,td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--accent-soft);font-weight:650;font-size:13px}
+tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:.87em;background:var(--accent-soft);
+  padding:2px 6px;border-radius:5px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;font-size:12.8px;line-height:1.62}
+pre code{background:none;padding:0;font-size:inherit}
+blockquote{margin:16px 0;padding:10px 18px;border-left:3px solid var(--line);
+  color:var(--ink2);background:var(--bg);border-radius:0 8px 8px 0}
+blockquote p{margin:6px 0}
+ul,ol{padding-left:24px}li{margin:5px 0}
+hr{border:none;border-top:1px solid var(--line);margin:32px 0}
+a{color:var(--accent)}
+footer{margin-top:32px;font-size:13px;color:var(--ink3);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="index.html">← 返回对比页</a>
+<article>
+<h1 id="dsh-sdk-快速入门教学规划">dsh SDK 快速入门：教学规划</h1>
+<blockquote>
+<p>状态：规划稿。不含教材正文，不含实现代码。</p>
+<p>核对基线：<code>官方仓库 deepseek-ai/deepseek-harness</code>，commit <code>47f943859b</code>（2026-08-13），仓库版本 <code>0.1.0-rc.5</code>。本文所有 API、包名、字段名都来自这份仓库的原文；没有引用二手资料。</p>
+<p>版本提醒：你说 PyPI 最新是 <code>0.2.2rc2</code>，但这份源码仓库是 <code>0.1.0-rc.5</code>，也没有找到 <code>0.2.2rc2</code> 对应的 tag。这是写作前必须拍板的第 2 个点（见 §7），不是可以含糊过去的小事。</p>
+</blockquote>
+<hr />
+<h2 id="0-先说清楚这份材料怎么讲">0. 先说清楚这份材料怎么讲</h2>
+<h3 id="01-两条线一个骨架">0.1 两条线，一个骨架</h3>
+<ul>
+<li><strong>看懂线（60 分钟）</strong>：不追求覆盖所有子系统，只把「一个进程、一棵插件树、一条会话日志、三条接缝」讲透。</li>
+<li><strong>做出来线（3.5–4.5 小时）</strong>：同一份代码从 <code>hello.py</code> 长到「有界面、能流式、有自己工具、真 key 不进引擎」的小应用。</li>
+</ul>
+<p>整个材料只反复使用一张骨架图：</p>
+<pre class="text"><code>一个 dsh 进程
+├─ Cordis 容器（ctx）
+│  ├─ ctx.llm        ← 模型面：谁把 token 变成流
+│  ├─ ctx.tools      ← 工具面：模型能做什么动作
+│  ├─ ctx.sessions   ← 会话日志：模型看到的历史从哪来
+│  └─ ctx.agents     ← 回合：谁把上面三样串起来
+└─ 传输层            ← 控制面：谁在跟这个进程说话
+   ├─ stdio JSON-RPC（Python SDK / 你的 BFF）
+   ├─ HTTP + SSE（Web UI）
+   └─ 一次性 stdout（headless）</code></pre>
+<p><strong>三条接缝</strong>是整份材料的骨架：</p>
+<table>
+<thead>
+<tr>
+<th>接缝</th>
+<th>一句话</th>
+<th>换它意味着什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>控制面</td>
+<td>谁把用户的话送进去、谁把事件送出来</td>
+<td>换前端、换语言、换部署方式</td>
+</tr>
+<tr>
+<td>模型面</td>
+<td>请求打到哪个 URL、用哪个 key、怎么流式返回</td>
+<td>换模型、换网关、换 key 管理</td>
+</tr>
+<tr>
+<td>工具面</td>
+<td>模型能调用哪些工具、工具在哪里执行</td>
+<td>换工具、接 MCP、关内置工具</td>
+</tr>
+</tbody>
+</table>
+<p>StaffDeck 值得借的只有这三条分界线，不是它的 12 万行。教材会明确说：<strong>三条缝各自独立，换一条不需要动另外两条</strong>。</p>
+<p>把 StaffDeck 的三个选择投影到这份材料，正好一一对应：</p>
+<table>
+<thead>
+<tr>
+<th>StaffDeck 的做法</th>
+<th>本教材的落点</th>
+<th>只借什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>控制面走 stdio JSON-RPC</td>
+<td>L0/L1/L2：SDK 启动引擎、<code>session.event</code> 流、BFF 投影成 SSE</td>
+<td>协议边界，不借它的客户端体量</td>
+</tr>
+<tr>
+<td>模型面用本地 OpenAI 兼容网关 + 一次性 activation token</td>
+<td>L4：引擎只拿 <code>act-...</code>，真 key 在网关</td>
+<td>key 不落引擎的思路，不借它的网关实现</td>
+</tr>
+<tr>
+<td>工具面关掉内置工具、改挂自己的 MCP server</td>
+<td>L3：删/disable 内置 tool row，加 <code>mcp-client</code>，MCP server 独立进程</td>
+<td>工具面边界，不借它的工具数量</td>
+</tr>
+</tbody>
+</table>
+<p>这样学员每做完一个阶段，都能把它映射回 StaffDeck 的一个选择，而不是「又做了一个 demo」。</p>
+<h3 id="02-五条写作规则">0.2 五条写作规则</h3>
+<ol type="1">
+<li><strong>先现象，后命名</strong>：每章开头先给一个屏幕上能看到或能画出来的场景，再出现术语。</li>
+<li><strong>一次最多引入三个新术语</strong>：讲完三个，先给一个画面/例子，再讲下一组；不要一口气五个。术语第一次出现时，必须有一句「它在图上的位置」。</li>
+<li><strong>每章末尾一道复述题</strong>：不是选择题，是「用自己的话讲给同事听」的题。</li>
+<li><strong>每个动手阶段先写验收现象</strong>：看不到这个现象，就不算过，不靠「应该可以」。</li>
+<li><strong>只引路径，不引行号</strong>：源码行号会漂，路径和概念不会。</li>
+</ol>
+<h3 id="03-明确不讲的清单">0.3 明确不讲的清单</h3>
+<p>60 分钟装不下，也不该装：</p>
+<ul>
+<li>Cordis 框架源码、HMR、插件的热替换细节；</li>
+<li>subagent 调度、workflow、Ralph、goal；</li>
+<li>compaction、token 计费、session fork；</li>
+<li>ACP、TUI、Web Client 插件开发；</li>
+<li>Windows 的 pwsh 分支（本教材的 SDK minimal 组合本来就不支持 Windows）。</li>
+</ul>
+<p>这些只在「边界」处提一句，不展开。</p>
+<h3 id="04-课前-15-分钟检查">0.4 课前 15 分钟检查</h3>
+<ul>
+<li>Python 3.10+；<code>python -c "import sys; print(sys.version)"</code>。</li>
+<li>一个可用的 <code>DEEPSEEK_API_KEY</code>；先确认它能直接调通官方端点，排除 key 本身的问题。</li>
+<li>一个空的 <code>sandbox/</code> 目录；不要把公司代码、个人文件放进去。</li>
+<li>macOS 14+ arm64 或 Linux；Windows 直接换机器/容器，不要试图绕过 PTY。</li>
+<li>只有 L3-A 需要：Node &gt;= 22.19、pnpm、能完整 clone 官方仓库的磁盘空间。没有这些就默认走 L3-B。</li>
+</ul>
+<hr />
+<h2 id="1-分章方案1-小时速览">1. 分章方案（1 小时速览）</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>章节标题</th>
+<th>这一章讲什么（一句话）</th>
+<th>先给的画面</th>
+<th>预计字数</th>
+<th>分钟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>先看见再命名：两个进程、一棵树、一条日志</strong></td>
+<td>从 <code>python hello.py</code> 的屏幕现象出发，建立「SDK 进程 + 引擎进程 + 会话日志」的三件套</td>
+<td>终端吐出一句话；<code>ps</code> 里多了一个 <code>dsh-jsonrpc-agent-pkg-...</code> 进程（单文件 Node 运行时）；<code>sessions/</code> 下多了一层项目目录和会话目录，里面有 <code>session.jsonl</code></td>
+<td>700</td>
+<td>5</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Cordis 五件事：插件、上下文、服务、事件、可逆注册</strong></td>
+<td>用「配电盘」讲清 <code>ctx.tools</code> / <code>ctx.llm</code> / <code>ctx.sessions</code> 为什么能被替换</td>
+<td>每个插件插上去，配电盘上多一个 <code>ctx.xxx</code>；拔掉，注册的东西自动消失</td>
+<td>1,300</td>
+<td>10</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>一次 turn 的行车记录仪</strong></td>
+<td>把 <code>turn/start</code> 到 <code>turn/end</code> 的事件序列拆成「模型请求 + 工具执行」的循环</td>
+<td>一次对话是一段行车记录：点火、每一帧、到站、熄火</td>
+<td>1,400</td>
+<td>10</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>三条接缝：控制面、模型面、工具面</strong></td>
+<td>换前端、换模型、换工具各自动哪一层；这是全篇的骨架</td>
+<td>三根管道：一根送话，一根送 token，一根送动作</td>
+<td>1,600</td>
+<td>12</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>profile 与 dsh-base：同一台发动机，不同车身</strong></td>
+<td>bundle 栈 + patch 的叠加顺序，以及为什么 patch 是整行替换</td>
+<td>一张装机单：先装 base，再装 web-app/headless，最后贴自己的 patch</td>
+<td>1,000</td>
+<td>8</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>SDK 只是遥控器</strong></td>
+<td><code>DeepSeekHarness</code> 的生命周期、<code>run()</code> 的活动区间、<code>events</code> 与 <code>notifications</code> 的差别</td>
+<td>遥控器按一下，电视自己换台；遥控器不生产画面</td>
+<td>900</td>
+<td>7</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>收束：一张图、三句话、六个坑</strong></td>
+<td>用自测题把「能复述」变成「能判断」</td>
+<td>把整棵树缩成一张 A4 图</td>
+<td>1,000</td>
+<td>8</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>合计</strong></td>
+<td></td>
+<td></td>
+<td><strong>7,900 字</strong></td>
+<td><strong>60 分钟</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="每章的一句话结论">每章的「一句话结论」</h3>
+<ol type="1">
+<li><strong>ch1</strong>：dsh 不是「一个 Python 库」，是「你的程序 + 一个被启动的引擎进程 + 一份可读的日志」。</li>
+<li><strong>ch2</strong>：插件不是「扩展点」，是「往共享上下文里注册服务/事件/效果」；注册是效果，卸载会回滚。</li>
+<li><strong>ch3</strong>：模型看到的历史不是内存里攒的，是从会话日志 <code>deriveMessages()</code> 投影出来的；<strong>model-visible means logged</strong>。</li>
+<li><strong>ch4</strong>：控制面只负责送话和收事件，模型面只负责 token 流，工具面只负责动作；三条缝不要互相渗透。</li>
+<li><strong>ch5</strong>：profile 是「具名组合」，bundle 是「可发行的 patch 层」，<code>dsh-base</code> 永远是第一层；patch 按 id 整行替换 config（或插入新行），不做深合并。</li>
+<li><strong>ch6</strong>：SDK 是控制面的一个 Python 客户端；<code>run()</code> 拥有一个从「prompt 的 durable inbox receipt」到「整个 agent 空闲」的活动区间。</li>
+<li><strong>ch7</strong>：能画出「三条接缝 + 一条日志」，能说出六个坑，才算真的看懂。</li>
+</ol>
+<h3 id="每章至少一个视觉锚点">每章至少一个视觉锚点</h3>
+<p>图不装饰，图就是复述的脚手架：</p>
+<ul>
+<li>ch1：进程/日志图（你的 Python、引擎进程、<code>session.jsonl</code>）。</li>
+<li>ch2：配电盘图 + <code>emit</code>/<code>waterfall</code>/<code>parallel</code>/<code>serial</code> 四行表。</li>
+<li>ch3：turn 时序图（<code>turn/start</code> 到 <code>turn/end</code>，标出 durable vs live）。</li>
+<li>ch4：三条接缝表 + 一张「请求从浏览器到模型」的路径图。</li>
+<li>ch5：层叠图（bundle 层 → profile patch → home patch → <code>--patch</code>）。</li>
+<li>ch6：SDK 调用时序图（<code>__enter__</code> → <code>run()</code> → <code>on_notification</code> → <code>idle</code>）。</li>
+<li>ch7：一张 A4 总图（三条接缝 + 日志 + 六个坑）。</li>
+</ul>
+<p>ch2 还要顺手讲一句 <code>!!js</code>：它是 Cordis loader 的表达式节点，不是 YAML 语法；看到 <code>!!js process.env.DSH_MODEL ?? 'deepseek-v4-flash'</code> 就知道是启动时求值。不展开 loader 源码，只讲「它不是魔法，是配置层的表达式」。</p>
+<h3 id="ch7-固定的六个坑">ch7 固定的六个坑</h3>
+<p>教材只讲这六个，不临时加；其他坑放到对应阶段的「坑」里：</p>
+<ol type="1">
+<li><code>minimal.cordis.yml</code> 是 <code>danger-full-access</code>，bash/editor 能改任何路径。</li>
+<li>这个 SDK 组合不支持 Windows（持久 PTY 要 POSIX）。</li>
+<li><code>run()</code> 是同步的，且拥有一个活动区间；不要在事件循环里直接调用它。</li>
+<li><code>RunResult.events</code> 只含根会话；<code>notifications</code> 含根 + 后代，二者不要混用。</li>
+<li>引擎的 stdout 是 JSON-RPC 协议；不要给引擎配置 stdout logger，诊断走 stderr（你自己的 BFF 可以正常打印）。</li>
+<li>子进程继承父进程环境；不显式覆盖 <code>DEEPSEEK_API_KEY</code>，真 key 会落进引擎。</li>
+</ol>
+<hr />
+<h2 id="2-1-小时速览的分钟级时间分配">2. 1 小时速览的分钟级时间分配</h2>
+<table>
+<thead>
+<tr>
+<th>时间段</th>
+<th>内容</th>
+<th>学完能回答什么问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0–5′</strong></td>
+<td>ch1：两个进程、一棵树、一条日志</td>
+<td>① dsh 跑起来时机器里有几个进程？② <code>RunResult</code> 里哪三个字段最该先看？③ 为什么会话日志是「源」而不是「副产品」？</td>
+</tr>
+<tr>
+<td><strong>5–15′</strong></td>
+<td>ch2：Cordis 五件事</td>
+<td>① 用一句话解释插件、上下文、服务、事件、可逆注册？② <code>ctx.tools</code> 和 <code>ctx.llm</code> 分别属于哪条接缝？③ 为什么说「没有特权内核」？</td>
+</tr>
+<tr>
+<td><strong>15–25′</strong></td>
+<td>ch3：一次 turn 的行车记录仪</td>
+<td>① turn 和 step 的区别？② <code>assistant/chunk</code> 和 <code>assistant/message</code> 哪个是权威？③ <code>tool/call</code> 和 <code>tool/result</code> 怎么配对？④ 哪些事件是 durable，哪些是 live？</td>
+</tr>
+<tr>
+<td><strong>25–37′</strong></td>
+<td>ch4：三条接缝</td>
+<td>① 控制面用什么协议、有哪些方法？② 模型面请求打到哪个 URL、带什么 header？③ 工具面怎么注册一个工具？MCP 工具叫什么名字？④ 三条缝各自由谁拥有？</td>
+</tr>
+<tr>
+<td><strong>37–45′</strong></td>
+<td>ch5：profile 与 dsh-base</td>
+<td>① profile 和 bundle 的区别？② <code>dsh-base</code> 在第几层？③ patch 的叠加顺序？④ 为什么 patch 不能深合并？⑤ <code>--dump-config</code> 看什么？</td>
+</tr>
+<tr>
+<td><strong>45–52′</strong></td>
+<td>ch6：SDK 只是遥控器</td>
+<td>① <code>DeepSeekHarness</code> 什么时候启动子进程？② <code>run()</code> 的区间从哪到哪？③ <code>events</code> 和 <code>notifications</code> 差在哪？④ 为什么 <code>run()</code> 是同步的？</td>
+</tr>
+<tr>
+<td><strong>52–60′</strong></td>
+<td>ch7：收束 + 自测</td>
+<td>① 六个坑分别是什么？② 模型说「我查不到工具」，你先看哪一层？③ token 不吐字，你先看哪一层？④ 让你同事复述，你会先讲哪三句话？</td>
+</tr>
+</tbody>
+</table>
+<p><strong>时间不够的降级方案</strong>：只有 45 分钟时，ch5 只讲「profile = bundle 栈 + patch、patch 整行替换」两句，把 <code>--dump-config</code> 留作课后；ch7 的自测题改成课后作业。不要砍 ch3 和 ch4，它们是骨架。</p>
+<hr />
+<h2 id="3-动手部分五个阶段">3. 动手部分：五个阶段</h2>
+<h3 id="30-总览">3.0 总览</h3>
+<p>一个目录，五个 git tag，代码只长大不复制：</p>
+<pre class="text"><code>app/
+  engine.py              # L0–L4 都只经过这一个引擎入口
+  app.py                 # L2 起：FastAPI + SSE
+  static/index.html      # L2 起：一个页面
+  mcp_server.py          # L3：自己的 MCP server
+  gateway.py             # L4：本地 OpenAI 兼容网关
+  cordis/
+    minimal.cordis.yml   # L0–L2
+    mcp.cordis.yml       # L3+
+sandbox/                 # 一次性工作区，可随时删
+sessions/                # 会话日志</code></pre>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>一句话目标</th>
+<th>屏幕上能看到什么</th>
+<th>累计代码量（自己写的）</th>
+<th>对应哪一层</th>
+<th>时间</th>
+<th>累计</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L0</strong></td>
+<td>装 SDK，跑通一句 hello</td>
+<td>终端一句话 + 一份可读的 <code>session.jsonl</code></td>
+<td>~25 行 Python</td>
+<td>控制面 + 模型面</td>
+<td>25′</td>
+<td>25′</td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>看见引擎事件流</td>
+<td>一行一个事件：<code>turn/start</code>、<code>assistant/chunk</code>、<code>tool/call</code>、<code>tool/result</code>、<code>turn/end</code></td>
+<td>~60 行 Python</td>
+<td>会话日志 + 事件域</td>
+<td>30′</td>
+<td>55′</td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>长出界面 + SSE</td>
+<td>浏览器里文字逐字出现，工具调用先 pending 再 result</td>
+<td>~190 行（Python + HTML）</td>
+<td>控制面 → BFF → 浏览器</td>
+<td>60′</td>
+<td>115′</td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>换成自己的 MCP 工具</td>
+<td>工具列表只剩 <code>mcp__ads__get_campaign</code>，调用返回你造的 campaign 数据</td>
+<td>~280 行（A）/ ~240 行（B）</td>
+<td>工具面</td>
+<td>60′（A）/ 30′（B）</td>
+<td>175′ / 145′</td>
+</tr>
+<tr>
+<td><strong>L4</strong></td>
+<td>摘掉真 key，走本地网关</td>
+<td>引擎进程里只有 <code>act-...</code>；停网关就报 <code>TRANSPORT</code>；真 key 轮换不用重启引擎</td>
+<td>~390 行（A）/ ~350 行（B）</td>
+<td>模型面</td>
+<td>50′</td>
+<td>225′ / 195′</td>
+</tr>
+<tr>
+<td><strong>复盘</strong></td>
+<td>画出三条缝，回答六个坑</td>
+<td>一张自己画的图 + 一段能讲给同事听的复述</td>
+<td>—</td>
+<td>全部</td>
+<td>15′</td>
+<td>240′ / 210′</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>代码量只算你新增/改写的 Python、HTML、YAML；不算从官方仓库复制的 <code>minimal.cordis.yml</code> 原文。相邻两阶段的差就是本阶段新增：L0 25 行、L1 +35、L2 +130、L3 +90（A）/+50（B）、L4 +110。</p>
+<p>A = L3 自建 runtime（把 MCP 接回主应用）；B = L3 用 <code>npx @deepseek-ai/dsh</code> 侧车（不接回主应用）。两条路的差别见 §3.4。</p>
+<p>如果「同一份代码连续长大」是硬要求，<strong>L3 必须走 A</strong>；B 只是保证今晚能看到 MCP 边界的退路，它不满足「同一份代码」。</p>
+</blockquote>
+<p><strong>总时长</strong>：A 路线约 <strong>4 小时</strong>，加 20–30 分钟缓冲 = <strong>4 小时 20 分–4 小时 30 分</strong>；B 路线约 <strong>3 小时 30 分</strong>，加 20 分钟缓冲 = <strong>3 小时 50 分</strong>。都在「一晚上」范围内。</p>
+<blockquote>
+<p>如果你不熟 FastAPI/SSE，L2 按 90 分钟估，总时长加 30 分钟；仍然在一个晚上内，但要把 L3 设为 B 路线，别让 L2 的超时挤压 L3/L4。</p>
+</blockquote>
+<hr />
+<h3 id="31-l0跑通一句-hello25-分钟25-行">3.1 L0：跑通一句 hello（25 分钟，~25 行）</h3>
+<p><strong>目标</strong>：从零安装 <code>deepseek-harness-sdk</code>，用官方 <code>minimal.py</code> + <code>minimal.cordis.yml</code> 跑一轮，拿到 <code>RunResult</code>，并在磁盘上找到会话日志。代码里只出现一个 import：<code>from deepseek_harness import DeepSeekHarness</code>。</p>
+<p><strong>屏幕现象</strong>：</p>
+<ol type="1">
+<li>终端打印一句模型回复，例如 <code>Hello! How can I help you today?</code>。</li>
+<li>打印 <code>finish_reason=completed</code>（或你显式打印的 <code>result.finish_reason</code>）。</li>
+<li><code>sessions/--&lt;你的-cwd&gt;--/&lt;session-id&gt;/session.jsonl</code> 存在；因为是 <code>compression: none</code>，可以直接 <code>less</code> 看到 <code>turn/start</code>、<code>assistant/message</code>、<code>turn/end</code>。</li>
+</ol>
+<p><strong>关键动作</strong>：</p>
+<ul>
+<li>在独立目录 <code>sandbox/</code> 里跑，<code>cwd</code> 指 <code>sandbox/</code>，<code>session_root</code> 指 <code>sessions/</code>；两个目录分开。</li>
+<li>把官方 <code>examples/jsonrpc-agent/minimal.py</code> 和 <code>minimal.cordis.yml</code> 复制进 <code>app/</code>，只改 <code>session_root</code>/<code>cwd</code> 的传参，不改配置内容。</li>
+<li><code>DEEPSEEK_API_KEY</code> 只放在当前 shell 的环境里，不写进 <code>sandbox/</code> 的任何文件。</li>
+</ul>
+<p><strong>对应哪一层</strong>：</p>
+<ul>
+<li>控制面：<code>DeepSeekHarness</code> 启动 bundled runtime，通过 stdio JSON-RPC 发 <code>initialize</code> / <code>session/prompt</code>，收 <code>session.event</code> / <code>session.status</code>。</li>
+<li>模型面：<code>minimal.cordis.yml</code> 里的 <code>llm-deepseek</code> 把请求发到 <code>DEEPSEEK_BASE_URL</code>（缺省是官方端点），用 <code>DEEPSEEK_API_KEY</code>。</li>
+</ul>
+<p><strong>验收（能说出来才算过）</strong>：</p>
+<ul>
+<li><code>DeepSeekHarness</code> 启动的是哪个可执行文件？为什么它「懒启动」？</li>
+<li><code>run()</code> 返回的 6 个字段分别是什么？<code>final_response</code> 和 <code>finish_reason</code> 各自描述的是「哪一段」？</li>
+<li><code>cwd</code> 和 <code>session_root</code> 的区别？为什么不能把 <code>session_root</code> 放在 <code>sandbox/</code> 里？</li>
+</ul>
+<p><strong>必须点明的坑</strong>：</p>
+<ul>
+<li><code>minimal.cordis.yml</code> 用的是 <strong><code>danger-full-access</code></strong>；<code>bash</code> 和 <code>str_replace_editor</code> 可以修改 runtime 进程能看到的任何路径。教材要在 L0 第一段就用醒目框写：<strong>只在一次性目录/容器里跑，不要把真 key、公司代码、个人文件放进 <code>cwd</code></strong>。</li>
+<li>这个组合的 <code>bash</code> 超时是 300 秒，编辑器单次输出上限 16,000 字符；这不是「安全限制」，只是体验限制。</li>
+<li>本教材的 SDK minimal 组合依赖持久 PTY，<strong>Windows 不行</strong>；macOS 14+ arm64 或 Linux。dsh 全量产品在 Windows 有 pwsh 分支，但不在本教材范围，不要混为一谈。</li>
+</ul>
+<hr />
+<h3 id="32-l1看见引擎事件流30-分钟累计-60-行">3.2 L1：看见引擎事件流（30 分钟，累计 ~60 行）</h3>
+<p><strong>目标</strong>：不只拿 <code>final_response</code>，而是把 <code>on_notification</code> 变成一台「事件打印机」，亲眼看见 turn / step / chunk / tool 的顺序。</p>
+<p><strong>屏幕现象</strong>：</p>
+<p>让它执行一句「用 bash 跑 <code>echo hello</code>，然后告诉我你看到了什么」，屏幕上按顺序出现（注意：工具调用之后还会有<strong>第二个 step</strong> 来让模型消化工具结果）：</p>
+<pre class="text"><code>session.event  turn/start
+session.event  step/start
+session.event  user/message
+session.event  assistant/chunk   (很多行，text 增量)
+session.event  assistant/message
+session.event  tool/call         name=bash  arguments=&quot;{\&quot;command\&quot;:\&quot;echo hello\&quot;}&quot;
+session.event  tool/result       isError=false
+session.event  step/end
+session.event  step/start        ← 第二个 step
+session.event  assistant/chunk
+session.event  assistant/message
+session.event  step/end
+session.event  turn/end          reason=completed
+session.status idle</code></pre>
+<p><strong>关键动作</strong>：</p>
+<ul>
+<li>加一个 <code>--trace</code> 开关；只打印 <code>notification.method == "session.event"</code> 且 <code>payload["sessionId"]</code> 等于当前 session 的事件。</li>
+<li>每个事件只打印 <code>type</code> + 2–4 个关键字段，绝不打印完整 payload（否则一屏几千行）。</li>
+<li>观察 <code>assistant/chunk</code> 的 <code>data.chunk.type == "text"</code> 和 <code>data.chunk.text</code>；还会看到 <code>reasoning</code> chunk，那是思考流，不是正文；观察 <code>tool/call</code> 的 <code>arguments</code> 是<strong>原始 JSON 字符串</strong>，不是 dict。</li>
+</ul>
+<p><strong>对应哪一层</strong>：</p>
+<ul>
+<li>会话日志：<code>turn/*</code>、<code>step/*</code>、<code>user/message</code>、<code>assistant/*</code>、<code>tool/call</code>、<code>tool/result</code> 是 durable 事件，会进 JSONL。</li>
+<li>事件域：<code>agent/pre-step</code>、<code>agent/request</code>、<code>llm/stream</code>、<code>tools/pre-execute</code>、<code>tools/execute</code>、<code>tools/post-execute</code>、<code>tools/result</code> 是 live 扩展点，不全会进日志；教材只用「看得到的事件」讲，不展开监听器。</li>
+</ul>
+<p><strong>验收</strong>：</p>
+<ul>
+<li><code>assistant/chunk</code> 和 <code>assistant/message</code> 哪个是权威？为什么 UI 回放保留 chunk、派生历史却跳过 chunk？</li>
+<li><code>RunResult.events</code> 和 <code>RunResult.notifications</code> 的差别？为什么子代理的消息不会替换根会话的回复？</li>
+<li><code>session.status idle</code> 为什么是 <code>run()</code> 的结束信号，而不是某个 <code>turn/end</code>？</li>
+</ul>
+<p><strong>坑</strong>：</p>
+<ul>
+<li>子代理通知会混进来；必须按 <code>sessionId</code> 过滤，否则你会以为主线多了事件。</li>
+<li><code>tool/call.arguments</code> 不要假设是 dict；它是模型产出的原始字符串，可能不合法，UI 要容错。</li>
+<li><code>assistant/chunk</code> 很密；教材要教「按 block index 聚合」，不要每个 chunk 建一个 DOM 节点。</li>
+</ul>
+<p><strong>复述题</strong>：「如果我只想看模型最终说了什么，我应该读 <code>events</code> 里的哪个事件？如果我想做打字机效果，我该读哪个事件？两者会不会重复？」</p>
+<hr />
+<h3 id="33-l2长出界面--sse60-分钟累计-190-行">3.3 L2：长出界面 + SSE（60 分钟，累计 ~190 行）</h3>
+<p><strong>目标</strong>：FastAPI 后端 + 一个 HTML 页面；<code>POST /api/chat</code> 触发一轮，<code>GET /api/events/{run_id}</code> 用 SSE 把投影后的事件推给浏览器；文字逐字出现，工具调用显示成卡片。</p>
+<p><strong>屏幕现象</strong>：</p>
+<ul>
+<li>浏览器输入「列出当前目录，并用一句话解释你看到了什么」。</li>
+<li>文字一个个出现，不是一次性刷出。</li>
+<li>先出现一张「正在运行 bash」的 pending 卡片，然后变成「已完成」并带输出。</li>
+<li>结束后显示 <code>finish_reason=completed</code>；输入框恢复可用。</li>
+</ul>
+<p><strong>架构（教材要画这张图）</strong>：</p>
+<pre class="text"><code>浏览器
+  │  POST /api/chat           GET /api/events/{run_id}  (SSE)
+  ▼                             ▲
+FastAPI（BFF）                  │ asyncio.Queue
+  │  run_in_executor            │
+  ▼                             │
+工作线程：harness.run(..., on_notification=...)
+  │                             │
+  ▼                             │
+SDK 子进程（引擎）── session.event / session.status ──┘</code></pre>
+<p><strong>关键动作</strong>：</p>
+<ul>
+<li><code>app.py</code> 维护一个 <code>run_id -&gt; asyncio.Queue</code> 的字典；<code>POST /api/chat</code> 创建队列、启动线程池任务、立刻返回 <code>run_id</code>。</li>
+<li>投影层只处理当前 <code>sessionId</code> 的 <code>session.event</code>；<code>session.status</code> 的 <code>idle</code> 用来发 <code>done</code>，不要把别的 session 或子代理事件混进来。</li>
+<li><code>on_notification</code> 在<strong>调用 <code>run()</code> 的那个工作线程</strong>上被回调；它不能直接 <code>await queue.put()</code>，要用 <code>loop.call_soon_threadsafe(queue.put_nowait, event)</code>。</li>
+<li>SSE 生成器只发<strong>投影后</strong>的事件：<code>{kind: "text_delta", text}</code>、<code>{kind: "tool_call", name, arguments}</code>、<code>{kind: "tool_result", name, isError, text}</code>、<code>{kind: "done", finish_reason}</code>。不要把完整 <code>session.event</code> 丢给前端。</li>
+<li><code>assistant/chunk</code> 里不只有正文：<code>chunk.type == "text"</code> 才是回答，<code>reasoning</code> 是思考流。第一版可以折叠或不显示 reasoning，但绝不能把它混进正文；否则页面会出现两段重复的话。</li>
+<li>第一版不做历史重放；刷新页面就丢，这是故意的，把「日志回放」留到下一课。</li>
+</ul>
+<p><strong>对应哪一层</strong>：</p>
+<ul>
+<li>控制面：BFF 是 SDK 的调用方；浏览器不直接碰引擎。</li>
+<li>事件投影：你从 <code>session.event</code> 里挑出 UI 需要的最小字段；这是「控制面 → 你的协议」的翻译层，不是引擎内部事件总线。</li>
+</ul>
+<p><strong>验收</strong>：</p>
+<ul>
+<li>能画出「浏览器 ← SSE ← 队列 ← <code>on_notification</code> ← SDK ← 引擎」五段链路。</li>
+<li>能解释为什么不能在 <code>async def chat()</code> 里直接 <code>await harness.run()</code>。</li>
+<li>能说出「停止按钮」的真实能力：官方协议没有 per-prompt cancel / session-close；停止只能停止前端等待或关闭 runtime，不能优雅取消引擎里的 turn。</li>
+</ul>
+<p><strong>坑</strong>：</p>
+<ul>
+<li><code>run()</code> 是同步阻塞的；必须放线程池，否则整个事件循环卡死，SSE 一个字都出不来。</li>
+<li><code>on_notification</code> 是工作线程；<code>asyncio.Queue</code> 不是线程安全的，必须 <code>call_soon_threadsafe</code>。</li>
+<li>队列要有 <code>maxsize</code> 和超时；模型输出很快时，SSE 客户端断开会造成积压。</li>
+<li><strong>先连 SSE 再 POST</strong>，或者让队列保留一小段 backlog；否则 <code>POST /api/chat</code> 已经跑出前几个 token，浏览器才连上 <code>GET /api/events</code>，第一段字会丢。</li>
+<li>一轮结束后要发 sentinel，SSE 生成器才能退出；否则浏览器一直挂着。</li>
+<li>启动失败（缺 key、runtime 起不来、MCP 没工具）也要推一个 <code>error</code> 事件再发 sentinel；否则前端只会看到「一直转圈」。</li>
+</ul>
+<p><strong>复述题</strong>：「如果浏览器只收到 <code>assistant/chunk</code>、没有收到 <code>assistant/message</code>，是引擎没发，还是你的投影层丢了？你先查哪一段？」</p>
+<hr />
+<h3 id="34-l3换成自己的-mcp-工具60-分钟-a--30-分钟-b累计-280--240-行">3.4 L3：换成自己的 MCP 工具（60 分钟 A / 30 分钟 B，累计 ~280 / ~240 行）</h3>
+<p><strong>目标</strong>：模型看到的工具从「内置 bash/editor」变成「你写的 <code>mcp__ads__get_campaign</code>」，调用返回你造的 campaign 数据；控制面协议和模型面配置不用改，只换引擎的启动参数和 cordis 组合。</p>
+<h4 id="先说一个必须知道的事实">先说一个必须知道的事实</h4>
+<p>按这份 <code>0.1.0-rc.5</code> 源码核对：</p>
+<ul>
+<li><code>python/sdk-runtime/package.json</code> 是 SDK 单文件运行时的 deploy root，它的依赖列表里<strong>没有</strong> <code>@deepseek-ai/dsh-mcp-client</code>。</li>
+<li><code>python/sdk-runtime/README.md</code> 明确说：想给发行版加一个插件，就是往这个 <code>package.json</code> 加一行依赖，然后重新构建。</li>
+<li>所以，<strong>只改 <code>cordis.yml</code> 加一行 <code>mcp-client</code>，按这份 0.1.0-rc.5 的 PyPI 包装出来的 SDK runtime 是加载不了的</strong>。这不是配置写错，是插件根本不在那个单文件可执行文件里。</li>
+</ul>
+<p>因此 L3 有两条可跑路线，必须二选一：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>L3-A：自建 runtime</strong></th>
+<th><strong>L3-B：dsh 侧车</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>做法</td>
+<td>clone 仓库 → 往 deploy root 加 <code>@deepseek-ai/dsh-mcp-client</code> → 重编 runtime → 装 runtime wheel（或 <code>runtime_bin</code> 指 <code>dist-exe</code>）</td>
+<td><code>npx @deepseek-ai/dsh</code> 装一个独立 profile，<code>dsh plugin add</code> 装 <code>@deepseek-ai/dsh-mcp-client</code>，用 <code>--patch</code> 挂载</td>
+</tr>
+<tr>
+<td>保住 L2 前端</td>
+<td><strong>是</strong>，同一个 FastAPI 页面继续用</td>
+<td><strong>否</strong>，这一段用官方 Web UI 看工具调用</td>
+</tr>
+<tr>
+<td>时间</td>
+<td>60′（含 30–45′ 构建，可与 L1/L2 并行）</td>
+<td>30′</td>
+</tr>
+<tr>
+<td>风险</td>
+<td>构建失败、版本对不上（SDK 与 runtime 必须同 commit）</td>
+<td>工具面能跑，但没接回主应用</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>想把 MCP 接进最终应用</td>
+<td>今晚先看见 MCP 边界</td>
+</tr>
+<tr>
+<td>教材默认</td>
+<td><strong>推荐</strong>，但设 45 分钟硬超时</td>
+<td><strong>自动降级</strong>，超时就切</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>推荐策略：19:00 一开始就在另一个终端启动 L3-A 的构建，L1/L2 照常做；20:45 构建还没绿，就切 L3-B，不要为构建熬夜。最终应用的「有自己工具」只有 A 能给你；B 给你的是「看懂并跑通 MCP 边界」。</p>
+<p>换句话说：<strong>L3-B 是「保证能跑」的底线，L3-A 是「接回主应用」的目标。</strong> 教材会把 B 写成主路径的降级分支，而不是失败后的补救；两者用同一个 MCP server、同一套工具名，切换成本很低。</p>
+</blockquote>
+<h4 id="l3-a-的具体步骤教材里写成清单不写实现代码">L3-A 的具体步骤（教材里写成清单，不写实现代码）</h4>
+<blockquote>
+<p>构建前置：Node &gt;= 22.19（<code>python/sdk-runtime/README.md</code> 对 dev node carrier 的要求）、pnpm、仓库依赖能装完。先把这条写在 L3-A 开头，避免学员卡在 Node 版本上。</p>
+</blockquote>
+<ol type="1">
+<li><strong>锁版本 + 加依赖</strong>：clone 仓库到固定 commit；在 <code>python/sdk-runtime/package.json</code> 的 dependencies 里加 <code>@deepseek-ai/dsh-mcp-client</code>；<code>pnpm install</code>。</li>
+<li><strong>构建 runtime</strong>：<code>pnpm exec tsx scripts/build-exe-for-python-sdk.ts --targets=node24-macos-arm64</code>（Linux 换成对应 target；脚本默认会跑 <code>pnpm run build</code>，已有 <code>lib/</code> 时可加 <code>--skip-build</code>）。产物在 <code>dist-exe/</code>；macOS 的 <code>-spawn-helper</code> 兄弟文件由构建脚本一并产出并同步进 <code>python/sdk-runtime/</code>，不要手工只拷 exe。</li>
+<li><strong>打 wheel + 安装</strong>：按 <code>python/development.md</code> 的「Build distributions」流程，从同一 commit 打 <strong>SDK wheel + runtime wheel</strong>；<code>pip install --find-links dist-python deepseek-harness-sdk=="$version"</code>。不要直接 <code>pip install -e python/sdk</code>：SDK 依赖同版本的 <code>deepseek-harness-runtime-bin</code>，直接 editable install 容易解析不到本地 runtime。</li>
+<li><strong>写 <code>mcp.cordis.yml</code></strong>：从 <code>minimal.cordis.yml</code> 删掉 <code>persistent-bash</code> 和 <code>str-replace-editor</code> 两行，加上一行 <code>mcp-ads</code>：
+<ul>
+<li><code>transport: stdio</code></li>
+<li><code>serverName: ads</code></li>
+<li><code>command: /abs/path/to/venv/bin/python</code>（不要依赖 <code>python</code> 在 PATH 里；引擎进程的 PATH 可能和你的 shell 不同）</li>
+<li><code>args: ["/abs/path/mcp_server.py"]</code></li>
+<li><code>failOnStartupError: true</code>（开发期必开；默认 <code>false</code> 会让 MCP 启动失败静默变成「没有工具」）</li>
+</ul></li>
+<li><strong>写 <code>mcp_server.py</code></strong>：用官方 MCP Python SDK 的 stdio server，只暴露一个 <code>get_campaign(campaign_id: str)</code>，返回假数据 <code>{campaign_id, name, status, spend}</code>。</li>
+<li><strong>改 <code>engine.py</code></strong>：只加 <code>cordis="mcp.cordis.yml"</code>；如果 runtime wheel 已经装进 venv，SDK 会自动找到 bundled runtime，<strong>不需要</strong> <code>runtime_bin</code>。只有你想绕过 wheel、直接指 <code>dist-exe/...</code> 时才传 <code>runtime_bin</code>。前端最多改工具卡片的显示名，不需要改链路。</li>
+</ol>
+<p><strong>L3-A 屏幕现象</strong>：</p>
+<ul>
+<li>模型工具列表里只剩 <code>mcp__ads__get_campaign</code>，没有 <code>bash</code>、没有 <code>str_replace_editor</code>。</li>
+<li>你说「查一下 campaign 123」，模型先调用工具，再回答 <code>campaign 123 是 ...，状态 ...，花费 ...</code>。</li>
+<li>事件流里出现 <code>tool/call name=mcp__ads__get_campaign</code> 和对应的 <code>tool/result</code>。</li>
+</ul>
+<h4 id="l3-b-的具体步骤不重编">L3-B 的具体步骤（不重编）</h4>
+<ol type="1">
+<li><code>npx @deepseek-ai/dsh web</code> 先确认官方 Web UI 能起（默认 <code>http://127.0.0.1:3080</code>）。</li>
+<li><code>npx @deepseek-ai/dsh plugin --profile web add @deepseek-ai/dsh-mcp-client</code>；这条命令转发给 profile 目录里的 pnpm，把包装进 profile 的 <code>node_modules</code>。</li>
+<li>写一个 <code>mcp.patch.yml</code>：插入 <code>mcp-ads</code> 行；把 <code>tool-bash</code>、<code>tool-fs</code>、<code>tool-fs-search</code>、<code>tool-str-replace-editor</code>、<code>tool-todo</code>、<code>tool-web</code>、<code>tool-subagent</code>、<code>tool-jobs</code> 这些模型面工具行 <code>disabled: true</code>（这不是完整列表；以 <code>packages/bundle/base/cordis.patch.yml</code> 的 row id 为准，逐个核对，最后用 <code>--dump-config</code> 确认没有漏网的内置工具）。</li>
+<li><code>npx @deepseek-ai/dsh --profile web --patch ./mcp.patch.yml</code>，在官方 Web UI 里做同一个 campaign 查询。如果 UI 弹出工具审批，点允许；那是 dsh 的 approval 层，不是 MCP 协议的一部分。</li>
+<li>L2 的页面不动；这一段是「工具面」的对照实验。</li>
+</ol>
+<p><strong>L3-B 屏幕现象</strong>：</p>
+<ul>
+<li>官方 Web UI 的工具列表/调用卡片里出现 <code>mcp__ads__get_campaign</code>；内置的 bash/fs 工具不再出现。</li>
+<li>同一句「查一下 campaign 123」返回你造的假数据；工具卡片上能看到 MCP 的 server 前缀。</li>
+<li>L2 的 FastAPI 页面还在，但它这一轮没有接 MCP；这是 B 路线的明确代价。</li>
+</ul>
+<blockquote>
+<p>L3-B 有一个需要在目标版本上验证的点：<code>dsh plugin add</code> 对没有 <code>dsh.bundle</code> 声明的包只当作普通依赖安装，会打印警告；patch 里的 <code>mcp-ads</code> 行能不能按包名从 profile 的 <code>node_modules</code> 解析到，取决于该版本的 loader。如果报「找不到包」，先看 profile 的 <code>package.json</code> 是否真的有这个依赖，再决定用包名还是绝对路径；这一步要在正文里写成可排错的检查点，不能假设一次成功。</p>
+</blockquote>
+<h4 id="两条路共同的坑">两条路共同的坑</h4>
+<ul>
+<li><code>serverName</code> 必须是 <code>[A-Za-z0-9_-]{1,32}</code>；模型看到的工具名是 <code>mcp__&lt;serverName&gt;__&lt;rawName&gt;</code>，会被规范到 64 字符，必要时加 12 位 hash 后缀。不要自己拼一个「看起来像」的名字。</li>
+<li><code>command</code> 用绝对路径的 Python（venv 的 <code>bin/python</code>），不要依赖 PATH；MCP server 的 <code>args</code> 也用绝对路径。引擎进程的工作目录和你的 shell 不一定一样。</li>
+<li><code>failOnStartupError</code> 默认 <code>false</code>：MCP server 挂了，插件会「成功激活但没有工具」。开发期一定设 <code>true</code>，让错误在启动时炸出来。</li>
+<li>MCP stdio 子进程拿到的是 <strong>scrubbed ambient env</strong>，不是完整的父进程环境；要给它 secret 就在 <code>env:</code> 里显式传，不要指望它继承 <code>DEEPSEEK_API_KEY</code>。</li>
+<li><code>toolCallTimeoutMs</code> 默认 60 秒；长查询要显式调大。</li>
+<li><strong>SDK minimal 组合没有 approval UI</strong>：MCP 工具会直接执行。教程里的 <code>get_campaign</code> 是只读假数据，所以没问题；换成真实投放/改预算工具时，必须在 MCP server 内部做权限、审计、幂等，不能指望引擎弹窗。</li>
+<li>关内置工具是「关 row」，不是「删代码」；在 SDK 组合里删掉那两行，在 dsh profile 里 <code>disabled: true</code>，两种做法都行，但教材要说清你关的是哪一层。</li>
+</ul>
+<p><strong>对应哪一层</strong>：工具面（<code>ctx.tools</code> + MCP client + 独立 MCP server 进程）。控制面不变，模型面不变。</p>
+<p><strong>验收</strong>：</p>
+<ul>
+<li>能说出「内置工具关掉」具体关的是哪些 row、为什么关 row 就够了。</li>
+<li>能说出 MCP server 是独立进程还是 in-process、它的 stdout 为什么不能随便打印。</li>
+<li>能说出工具结果怎么回到模型：MCP <code>callTool</code> → <code>ctx.tools</code> 的 canonical value → <code>tool/result</code> → 下一次模型请求。</li>
+<li>能解释 <code>mcp__ads__get_campaign</code> 这个名字是哪三个部分拼的。</li>
+</ul>
+<p><strong>复述题</strong>：「如果模型说没有 <code>mcp__ads__get_campaign</code>，你先查 MCP 连接、工具注册，还是模型 prompt？三者的现象有什么不同？」</p>
+<hr />
+<h3 id="35-l4摘掉真-key走本地网关50-分钟累计-390--350-行">3.5 L4：摘掉真 key，走本地网关（50 分钟，累计 ~390 / ~350 行）</h3>
+<p><strong>目标</strong>：引擎进程的环境里只有一次性 activation token；真 key 只在网关（或 BFF）进程；一轮对话里模型可以请求多次，run 结束就吊销 token。</p>
+<p><strong>屏幕现象</strong>：</p>
+<ul>
+<li><code>ps eww &lt;引擎 pid&gt;</code>（macOS 上用 <code>ps -E</code>，或平台对应的看环境变量的方式）里看不到 <code>DEEPSEEK_API_KEY=sk-...</code>，只能看到 <code>DEEPSEEK_API_KEY=act-...</code>（或者你自定义的变量名）。</li>
+<li>把网关停掉，下一轮对话报 <code>TRANSPORT</code>，错误信息指向 <code>http://127.0.0.1:8787</code>。</li>
+<li>拿一个已经吊销的 token 再启动，第一轮就 401。</li>
+<li>在网关侧轮换真 key（网关重读配置或重启网关），引擎不用重启，下一轮自动用新 key。</li>
+</ul>
+<p><strong>架构（教材要画这张图）</strong>：</p>
+<pre class="text"><code>引擎进程                          网关进程                      DeepSeek
+DEEPSEEK_BASE_URL ──────────────► 127.0.0.1:8787/v1
+DEEPSEEK_API_KEY=act-...  ──────► 校验 token / session / TTL
+                                  替换 Authorization: Bearer &lt;真 key&gt; ──► api.deepseek.com
+                                  ◄────────── SSE 流式回传 ◄────────────</code></pre>
+<p><strong>关键动作</strong>：</p>
+<blockquote>
+<p>先划清边界：<code>/activate</code>、<code>/revoke</code>、activation token 的格式，都是<strong>教材自己的网关协议</strong>，不是 dsh 的 API。dsh 侧只负责把 <code>base_url</code> / <code>api_key</code> 解析成适配器的 <code>baseURL</code> 和 <code>Authorization</code>；不要把自定义端点数成 dsh 的字段。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>东西</th>
+<th>住在哪个进程</th>
+<th>引擎能看到吗</th>
+<th>怎么轮换</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真 <code>DEEPSEEK_API_KEY</code></td>
+<td>网关（或 BFF）</td>
+<td><strong>不能</strong></td>
+<td>网关重读配置/重启网关</td>
+</tr>
+<tr>
+<td><code>act-...</code> activation token</td>
+<td>引擎的 <code>DEEPSEEK_API_KEY</code></td>
+<td>能，它本来就要用</td>
+<td>每个 run 一个，run 结束吊销</td>
+</tr>
+<tr>
+<td><code>x-deepseek-harness-session-id</code></td>
+<td>引擎 → 网关的请求头</td>
+<td>能</td>
+<td>每个 run 一个</td>
+</tr>
+</tbody>
+</table>
+<ol type="1">
+<li>网关提供 <code>POST /activate</code>：BFF 用「本轮 run id + session id」换一个 <code>act-...</code>，记录 <code>{token, session_id, expires_at}</code>。</li>
+<li>BFF 用 <code>DeepSeekHarness(base_url="http://127.0.0.1:8787/v1", api_key="act-...")</code> 启动引擎；SDK 会把这两个值写进子进程环境（<code>DEEPSEEK_BASE_URL</code> / <code>DEEPSEEK_API_KEY</code>）。如果你用的版本没有这两个 kwarg，就直接设置同名环境变量，效果一样。</li>
+<li>网关的 <code>/v1/chat/completions</code> 校验 <code>Authorization: Bearer act-...</code>。如果请求带了 <code>x-deepseek-harness-session-id</code>，再校验它是否和 token 绑定的一致；没带就只校验 token / TTL（适配器只在 <code>GenerateOptions.sessionId</code> 存在时发这个 header，不要把「一定带」写死）。通过后把 <code>Authorization</code> 换成真 key，转发到 <code>https://api.deepseek.com/chat/completions</code>，原样流式回传 SSE。</li>
+<li><code>run()</code> 结束，BFF 调 <code>POST /revoke</code>；TTL 兜底（按一轮 run 的最长时长设，例如 30 分钟，不要设得太短）。</li>
+</ol>
+<p><strong>一个必须讲清的设计点</strong>：</p>
+<blockquote>
+<p><strong>「一次性」是「一次 run 一个」，不是「一次 HTTP 请求一个」。</strong></p>
+<p>一轮对话里，模型可能因为工具调用请求多次（step 1 请求 → 工具 → step 2 请求）。如果 token 在每个 HTTP 请求后就作废，第二次请求就会 401。教材把「一次性」定义为<strong>一次 run / 一次引擎启动一个 token</strong>，run 结束就吊销；这既符合「一次性」的直觉，也不会打断工具循环。如果你参考的项目把粒度定在「一次引擎启动」，原理相同，只是吊销时机不同。</p>
+</blockquote>
+<p><strong>对应哪一层</strong>：模型面（<code>ctx.llm</code> 的 baseURL 与 credential 解析）。控制面不变，工具面不变。</p>
+<p><strong>验收</strong>：</p>
+<ul>
+<li>真 key 在哪个进程的内存里？引擎进程里有什么？BFF 进程里有什么？</li>
+<li>为什么「把 key 放进环境变量」不等于「key 不落引擎」？子进程继承父进程环境这件事，你在哪里验证？</li>
+<li>token 的生命周期和 <code>run()</code> 的生命周期是什么关系？网关重启，正在跑的 run 会怎样？</li>
+<li>为什么网关要校验 <code>x-deepseek-harness-session-id</code>（当它存在时）？不校验会怎样？</li>
+</ul>
+<p><strong>坑（教材要逐条点明）</strong>：</p>
+<ul>
+<li><strong>子进程继承父环境</strong>：SDK 启动 runtime 时是 <code>os.environ.copy()</code> 再叠加配置；如果 BFF 的环境里有真 <code>DEEPSEEK_API_KEY</code>，引擎会继承它。必须显式用 <code>api_key="act-..."</code> 覆盖，或在启动子进程前从环境里删掉真 key。只「不传 key」是不够的。</li>
+<li><strong><code>base_url</code> 拼路径</strong>：适配器请求的是 <code>{baseURL}/chat/completions</code>；你的网关如果路由是 <code>/v1/chat/completions</code>，就把 <code>base_url</code> 设成 <code>http://127.0.0.1:8787/v1</code>，不要重复拼 <code>/v1</code>。</li>
+<li><strong>SSE 透传</strong>：适配器带 <code>accept: text/event-stream</code>，并且依赖 <code>[DONE]</code> 结束；网关不要缓冲整个响应，也不要改写 SSE 帧，原样转发最稳。</li>
+<li><strong>日志脱敏</strong>：网关不要打印 <code>Authorization</code>；BFF 不要打印 <code>act-...</code> 的完整值；<code>cordis.yml</code> 里只写 <code>apiKeyEnv: DEEPSEEK_API_KEY</code>，永远不写 key 字面量。</li>
+<li><strong>只监听 127.0.0.1</strong>：网关是本地组件，不要 <code>0.0.0.0</code>；教程里的 demo 不需要 TLS，但生产需要。</li>
+<li><strong>不要用 <code>max_tokens</code> 当安全边界</strong>：它是输出上限，不是权限。</li>
+</ul>
+<p><strong>复述题</strong>：「如果你在引擎进程里 <code>env | grep DEEPSEEK</code> 看到了真 key，最可能是哪一步漏了？给出两个不同的修法。」</p>
+<hr />
+<h3 id="36-收尾15-分钟复盘">3.6 收尾：15 分钟复盘</h3>
+<p>让学员不看材料，画出下面这张图，并口头解释每个箭头：</p>
+<pre class="text"><code>浏览器 ──HTTP/SSE──► BFF ──stdio JSON-RPC──► 引擎
+                      │                       ├─ ctx.llm ──► 本地网关 ──► DeepSeek
+                      │                       ├─ ctx.tools ──► MCP server
+                      └─ 真 key                └─ ctx.sessions ──► session.jsonl</code></pre>
+<p>然后回答三个问题：</p>
+<ol type="1">
+<li>如果老板说「换成另一个模型」，你动哪一层？为什么另外两层不用动？</li>
+<li>如果老板说「接我们自己的广告投放工具」，你动哪一层？MCP server 应该由谁维护？</li>
+<li>如果安全团队说「真 key 不能进引擎」，你怎么证明它没进去？拿什么命令、看哪个进程、看哪一行日志？</li>
+</ol>
+<hr />
+<h2 id="4-总时长与一晚上排期">4. 总时长与一晚上排期</h2>
+<h3 id="41-时间账">4.1 时间账</h3>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>L0</th>
+<th>L1</th>
+<th>L2</th>
+<th>L3</th>
+<th>L4</th>
+<th>复盘</th>
+<th>合计</th>
+<th>加缓冲</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A（自建 runtime）</strong></td>
+<td>25′</td>
+<td>30′</td>
+<td>60′</td>
+<td>60′</td>
+<td>50′</td>
+<td>15′</td>
+<td><strong>240′ = 4h00</strong></td>
+<td><strong>4h20–4h30</strong></td>
+</tr>
+<tr>
+<td><strong>B（dsh 侧车）</strong></td>
+<td>25′</td>
+<td>30′</td>
+<td>60′</td>
+<td>30′</td>
+<td>50′</td>
+<td>15′</td>
+<td><strong>210′ = 3h30</strong></td>
+<td><strong>3h50</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-一个可执行的晚上a-路线">4.2 一个可执行的晚上（A 路线）</h3>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>做什么</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>19:00–19:25</td>
+<td>L0：装 SDK、跑 hello、看 JSONL</td>
+<td>同时在另一个终端启动 L3-A 的 clone + pnpm install</td>
+</tr>
+<tr>
+<td>19:25–19:55</td>
+<td>L1：事件打印机</td>
+<td>让模型跑一次 bash，确认 <code>tool/call</code>/<code>tool/result</code></td>
+</tr>
+<tr>
+<td>19:55–20:55</td>
+<td>L2：FastAPI + SSE + 页面</td>
+<td>这是最费时间的阶段，预留 60′</td>
+</tr>
+<tr>
+<td>20:45</td>
+<td><strong>L3 构建检查点</strong></td>
+<td>没绿就切 L3-B，不要犹豫</td>
+</tr>
+<tr>
+<td>20:55–21:55</td>
+<td>L3：MCP server + 配置</td>
+<td>A 路线：构建已绿就直接接；B 路线：30′ 就够</td>
+</tr>
+<tr>
+<td>21:55–22:45</td>
+<td>L4：网关 + activation token</td>
+<td>先跑通，再做 <code>ps</code> 验证</td>
+</tr>
+<tr>
+<td>22:45–23:00</td>
+<td>复盘 + 画图</td>
+<td>不复盘等于没学</td>
+</tr>
+</tbody>
+</table>
+<p><strong>如果只有 3 小时</strong>：L0 → L1 → L2 → L4，L3 用 B 路线做 20 分钟演示，或者把 L3 留到第二天。不要为了 L3-A 的构建牺牲 L2/L4 的完整跑通。</p>
+<hr />
+<h2 id="5-打算引用的官方文件路径级">5. 打算引用的官方文件（路径级）</h2>
+<h3 id="51-必读写作时逐段对照">5.1 必读，写作时逐段对照</h3>
+<ul>
+<li><code>docs/user/guide/python-sdk.md</code>（及 <code>.zh.md</code>）：安装、示例、workspace/session、danger-full-access、POSIX 限制。</li>
+<li><code>python/sdk/README.md</code>（及 <code>.zh.md</code>）：<code>DeepSeekHarness</code> 生命周期、<code>RunResult</code> 语义、<code>events</code>/<code>notifications</code> 差别、<code>cordis</code> 注入。</li>
+<li><code>docs/architecture.md</code>：Cordis、profile/bundle、核心包、turn flow、session log、capability seams。</li>
+<li><code>docs/cordis-primer.md</code>：插件、上下文、服务、<code>inject</code>、事件分派模式、可逆效果。</li>
+<li><code>docs/tool-execution-pipeline.md</code>：<code>tools/pre-execute</code> → guards → <code>tools/execute</code> → <code>tools/post-execute</code> → <code>tools/result</code>。</li>
+<li><code>docs/subsystems/session.md</code>：<code>turn/*</code>、<code>step/*</code>、<code>assistant/chunk</code>、<code>tool/call</code>、<code>tool/result</code> 的字段与 durable/live 区分。</li>
+<li><code>packages/sdk/protocol/README.md</code>：stdio JSON-RPC 的方法、通知、无 cancel/session-close、stdout 是协议。</li>
+<li><code>packages/sdk/server/README.md</code>：服务端职责、<code>initialize</code>、<code>session/prompt</code>、<code>session.event</code>、<code>session.status</code>。</li>
+</ul>
+<h3 id="52-例子与-sdk-实现">5.2 例子与 SDK 实现</h3>
+<ul>
+<li><code>examples/jsonrpc-agent/minimal.py</code>、<code>minimal.cordis.yml</code>、<code>cordis.yml</code>、<code>README.md</code>。</li>
+<li><code>python/sdk/src/deepseek_harness/api.py</code>、<code>models.py</code>、<code>client.py</code>（API 形状、<code>RunResult</code>、<code>Notification</code>、子进程环境）。</li>
+<li><code>python/sdk-runtime/README.md</code>、<code>python/sdk-runtime/package.json</code>、<code>python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml</code>（bundled runtime 的 deploy closure 与默认配置）。</li>
+</ul>
+<h3 id="53-模型面">5.3 模型面</h3>
+<ul>
+<li><code>packages/llm/llm-deepseek/README.md</code>（<code>apiKeyEnv</code>、<code>baseURL</code>、<code>DEEPSEEK_BASE_URL</code>、<code>/chat/completions</code>、SSE、错误码）。</li>
+<li><code>packages/llm/llm-deepseek/src/adapter.ts</code>（<code>authorization: Bearer</code>、<code>accept: text/event-stream</code>、<code>x-deepseek-harness-session-id</code>；写作时只引路径，不引行号）。</li>
+<li><code>docs/subsystems/llm-streaming.md</code>、<code>docs/cookbook/adding-an-llm-adapter.md</code>。</li>
+</ul>
+<h3 id="54-工具面">5.4 工具面</h3>
+<ul>
+<li><code>docs/subsystems/tools.md</code>（tool registry、schema、pipeline、Code Mode）。</li>
+<li><code>docs/cookbook/adding-a-tool.md</code>（<code>defineTool</code>、<code>execute</code> 契约、输出 schema、UI card）。</li>
+<li><code>packages/mcp/mcp-client/README.md</code>（stdio/streamable-http、<code>serverName</code>、<code>mcp__&lt;serverName&gt;__&lt;rawName&gt;</code>、<code>failOnStartupError</code>、reconnect、scrubbed env）。</li>
+<li><code>docs/tool-catalog.md</code>（生成的工具目录；只用来核对名字，不抄行号）。</li>
+</ul>
+<blockquote>
+<p>边界说明：dsh 仓库只提供 <strong>MCP client</strong>（<code>packages/mcp/mcp-client</code>）和它的配置契约；MCP server 本身、MCP Python/TypeScript SDK 的用法不属于 dsh 仓库的事实范围。教材写 L3 时，dsh 侧一律引上面的 README；MCP server 的实现细节标注为「MCP 官方文档」，不要伪装成 dsh 文档。</p>
+</blockquote>
+<h3 id="55-组合profilecli">5.5 组合、profile、CLI</h3>
+<ul>
+<li><code>packages/bundle/base/README.md</code>、<code>packages/bundle/base/cordis.patch.yml</code>（第一层、row id、平台分支）。</li>
+<li><code>packages/boot/app-boot/src/profile.ts</code>（<code>PROFILE_TEMPLATES</code> 只有 web/headless；其他 profile 由 <code>dsh plugin</code> 创建）。</li>
+<li><code>apps/cli/README.md</code>（<code>--profile</code>、<code>dsh plugin</code>、<code>--dump-config</code>、layer order）。</li>
+<li><code>apps/cli/package.json</code>（CLI 的安装闭包依赖 <code>@deepseek-ai/dsh-mcp-client</code>，所以 <code>npx @deepseek-ai/dsh</code> 自带它）。</li>
+<li><code>docs/user/develop/basic/config.md</code>、<code>publish.md</code>（profile/patch/<code>dsh plugin add</code> 的官方教程）。</li>
+</ul>
+<h3 id="56-安全与边界">5.6 安全与边界</h3>
+<ul>
+<li><code>docs/subsystems/sandbox.md</code>、<code>docs/subsystems/permission-presets.md</code>。</li>
+<li><code>packages/session/session-persistence-jsonl/README.md</code>（JSONL 目录布局、<code>compression: none</code>、<code>packed chunk rows</code>）。</li>
+<li><code>docs/subsystems/web-server.md</code>（只是用来解释「官方 Web UI 的 HTTP/SSE 与 SDK 的 stdio 是两条控制面」，不深入）。</li>
+</ul>
+<blockquote>
+<p>上述 <code>.md</code> 绝大多数有对应的 <code>.zh.md</code>；少数生成文件或源码旁注可能只有英文，写作时以仓库实际文件为准。不要引用仓库外的二手文章，也不要把 StaffDeck 的代码当 dsh 的事实来源。</p>
+</blockquote>
+<hr />
+<h2 id="6-已核对的事实与边界防止写错">6. 已核对的事实与边界（防止写错）</h2>
+<table>
+<thead>
+<tr>
+<th>事实</th>
+<th>出处</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>仓库 LICENSE 是 MIT</td>
+<td><code>LICENSE</code></td>
+<td>与你的基线一致</td>
+</tr>
+<tr>
+<td>包名 <code>deepseek-harness-sdk</code>，import <code>deepseek_harness</code>，Python <code>&gt;=3.10</code></td>
+<td><code>python/sdk/pyproject.toml</code></td>
+<td>与你的基线一致</td>
+</tr>
+<tr>
+<td>API：<code>DeepSeekHarness(provider=, model=, max_tokens=, cwd=, session_root=, cordis=).run(input, session_id=, on_notification=)</code></td>
+<td><code>python/sdk/src/deepseek_harness/api.py</code></td>
+<td>还有 <code>base_url</code>/<code>api_key</code> 配置字段；L4 可以用，也可以走环境变量</td>
+</tr>
+<tr>
+<td><code>RunResult(session_id, final_response, finish_reason, events, notifications, session_root)</code></td>
+<td><code>python/sdk/src/deepseek_harness/models.py</code></td>
+<td><code>finish_reason</code> 是最后一个根会话 <code>turn/end</code> 的 kind，没有 turn 结束就是 <code>None</code></td>
+</tr>
+<tr>
+<td><code>events</code> 只含根会话；<code>notifications</code> 含根 + 已知后代</td>
+<td><code>python/sdk/README.md</code></td>
+<td>子代理消息不会替换根回复</td>
+</tr>
+<tr>
+<td><code>run()</code> 拥有从 prompt 的 durable inbox receipt 到下一次 whole-agent idle 的区间</td>
+<td><code>python/sdk/README.md</code></td>
+<td><code>final_response</code> 是区间内最后一条已提交的根助手文本</td>
+</tr>
+<tr>
+<td><code>minimal.cordis.yml</code> 工具只有持久 <code>bash</code> + <code>str_replace_editor</code>；<code>danger-full-access</code>；<code>compression: none</code>；bash 300s；editor 16k</td>
+<td><code>examples/jsonrpc-agent/minimal.cordis.yml</code></td>
+<td>教材必须点明 danger-full-access</td>
+</tr>
+<tr>
+<td>SDK minimal 组合不支持 Windows（持久 PTY 要 POSIX）</td>
+<td><code>docs/user/guide/python-sdk.md</code>、<code>examples/jsonrpc-agent/README.md</code></td>
+<td>dsh 全量产品另有 pwsh 分支，不在本教材范围</td>
+</tr>
+<tr>
+<td>stdout 是 JSON-RPC 协议，不能加 stdout logger</td>
+<td><code>packages/sdk/server/README.md</code></td>
+<td>诊断走 stderr</td>
+</tr>
+<tr>
+<td>协议没有 per-prompt cancel / session-close</td>
+<td><code>packages/sdk/protocol/README.md</code></td>
+<td>停止按钮的真实能力要讲清</td>
+</tr>
+<tr>
+<td><code>session.event</code> 的 payload 是 <code>{sessionId, event}</code>；<code>session.status</code> 有 <code>running</code>/<code>idle</code></td>
+<td><code>python/sdk/src/deepseek_harness/api.py</code></td>
+<td>L1/L2 的事件过滤依据</td>
+</tr>
+<tr>
+<td><code>assistant/chunk</code> 的 <code>data</code> 是 <code>{turn, step, chunk}</code>；text chunk 是 <code>{type:'text', index, text}</code></td>
+<td><code>docs/subsystems/session.md</code>、<code>packages/core/session/src/chunk-rows.ts</code></td>
+<td>打字机效果读它；派生历史跳过它</td>
+</tr>
+<tr>
+<td><code>tool/call</code> 的 <code>arguments</code> 是模型产出的原始 JSON 字符串</td>
+<td><code>docs/subsystems/session.md</code></td>
+<td>UI 要容错，不能假设是 dict</td>
+</tr>
+<tr>
+<td><code>llm-deepseek</code> 的 <code>apiKeyEnv</code> 默认 <code>DEEPSEEK_API_KEY</code>；<code>baseURL</code> 可由 <code>DEEPSEEK_BASE_URL</code> 提供；请求是 <code>{baseURL}/chat/completions</code></td>
+<td><code>packages/llm/llm-deepseek/README.md</code>、<code>src/adapter.ts</code></td>
+<td>L4 的网关路由就按这个拼</td>
+</tr>
+<tr>
+<td>请求头含 <code>authorization: Bearer</code>、<code>accept: text/event-stream</code>；有 sessionId 时再带 <code>x-deepseek-harness-session-id</code></td>
+<td><code>packages/llm/llm-deepseek/src/adapter.ts</code></td>
+<td>网关可以按 session header 绑定 token（存在时）</td>
+</tr>
+<tr>
+<td>SDK 启动 runtime 时 <code>os.environ.copy()</code> 再叠加配置</td>
+<td><code>python/sdk/src/deepseek_harness/client.py</code></td>
+<td>L4 的真 key 泄漏风险就在这</td>
+</tr>
+<tr>
+<td>SDK runtime 的 deploy closure 不含 <code>@deepseek-ai/dsh-mcp-client</code></td>
+<td><code>python/sdk-runtime/package.json</code>、<code>python/sdk-runtime/README.md</code></td>
+<td>按 0.1.0-rc.5 核对；0.2.2rc2 需预检</td>
+</tr>
+<tr>
+<td><code>dsh-mcp-client</code> 配置：<code>transport</code>（stdio/streamable-http）、<code>serverName</code>、<code>command</code>/<code>args</code>/<code>env</code>/<code>cwd</code>、<code>url</code>/<code>headers</code>、<code>toolCallTimeoutMs</code>、<code>failOnStartupError</code>、<code>reconnect.*</code></td>
+<td><code>packages/mcp/mcp-client/README.md</code></td>
+<td>工具名 <code>mcp__&lt;serverName&gt;__&lt;rawName&gt;</code></td>
+</tr>
+<tr>
+<td>MCP stdio 子进程用 scrubbed ambient env</td>
+<td><code>packages/mcp/mcp-client/README.md</code>、<code>src/transport.ts</code></td>
+<td>不要指望它继承真 key</td>
+</tr>
+<tr>
+<td><code>dsh-base</code> 是每个 profile 的第一层；patch 按 id 整行替换 config</td>
+<td><code>docs/architecture.md</code>、<code>packages/bundle/base/README.md</code></td>
+<td>不做深合并</td>
+</tr>
+<tr>
+<td>官方随包 profile 模板只有 <code>web</code>、<code>headless</code>；其他名字由 <code>dsh plugin</code> 创建</td>
+<td><code>packages/boot/app-boot/src/profile.ts</code>、<code>apps/cli/README.md</code></td>
+<td>你环境里的四个入口是安装/创建出来的 profile，机制相同</td>
+</tr>
+<tr>
+<td><code>@deepseek-ai/dsh</code> 的安装闭包依赖 <code>@deepseek-ai/dsh-mcp-client</code></td>
+<td><code>apps/cli/package.json</code></td>
+<td>L3-B 可行的依据</td>
+</tr>
+<tr>
+<td>会话 JSONL 在 <code>&lt;root&gt;/--&lt;cwd&gt;--/&lt;id&gt;/session.jsonl</code>（<code>compression: none</code>）</td>
+<td><code>packages/session/session-persistence-jsonl/README.md</code></td>
+<td>L0 让学员自己找到它</td>
+</tr>
+</tbody>
+</table>
+<p><strong>两处需要特别小心</strong>：</p>
+<ol type="1">
+<li><strong>版本差</strong>：源码仓库是 <code>0.1.0-rc.5</code>，你说 PyPI 是 <code>0.2.2rc2</code>。<code>base_url</code>/<code>api_key</code> 配置字段、<code>@deepseek-ai/dsh-mcp-client</code> 是否已进 runtime、默认配置的 row 名，都可能在 0.2.2rc2 变化。正文动笔前必须先定版本基线。</li>
+<li><strong>Windows</strong>：你的基线说「Windows 不行」，这对<strong>本教材的 SDK minimal 组合</strong>成立；但 dsh 全量产品的 <code>dsh-base</code> 已有 pwsh 分支。教材要写「本教材不支持 Windows」，不要写成「dsh 永远不支持 Windows」，否则会被懂行的人挑错。</li>
+</ol>
+<hr />
+<h2 id="7-需要你先拍板的-5-个点">7. 需要你先拍板的 5 个点</h2>
+<h3 id="1l3-走-a-还是-b">1）L3 走 A 还是 B？</h3>
+<ul>
+<li><strong>A</strong>：自建 runtime，把 <code>dsh-mcp-client</code> 编进去，MCP 接回 L2 的同一个前端；代价是 30–45 分钟构建 + SDK/runtime 必须同 commit。</li>
+<li><strong>B</strong>：<code>npx @deepseek-ai/dsh</code> 侧车，30 分钟看见 MCP 工具，但不在 L2 的页面里。</li>
+</ul>
+<p>我的建议：<strong>A 为目标，设 45 分钟硬超时，超时自动切 B</strong>。你需要拍板的是：你接受这个 timebox，还是今晚直接选 B、把 A 留到第二晚？</p>
+<h3 id="2正文按哪个版本写">2）正文按哪个版本写？</h3>
+<p>官方仓库是 <code>0.1.0-rc.5</code>（commit <code>47f943859b</code>），你说 PyPI 最新是 <code>0.2.2rc2</code>。这两个不是同一份代码。</p>
+<ul>
+<li>如果按 <strong>0.2.2rc2</strong> 写：我需要你允许我在<strong>本工作目录</strong>建一个临时 venv，装一份 0.2.2rc2 的 wheel，核对 <code>DeepSeekHarness</code> 的字段、默认 <code>cordis.yml</code>、runtime 的 deploy closure 是否已含 <code>mcp-client</code>；否则我只能按 0.1.0-rc.5 写，并在文首标注版本。</li>
+<li>如果按 <strong>0.1.0-rc.5</strong> 写：所有事实都能落到源码仓库的原文，但可能和你实际 <code>pip install</code> 到的版本有差异。</li>
+</ul>
+<p>你选哪个？</p>
+<h3 id="3前端技术栈">3）前端技术栈</h3>
+<ul>
+<li><strong>FastAPI + 原生 HTML/JS + EventSource</strong>（推荐）：L2 60 分钟，依赖少，SSE 一眼看懂。</li>
+<li><strong>Next.js/React</strong>：更接近你们的生产前端，但 L2 会涨到 90–120 分钟，总时长可能超过一晚上。</li>
+</ul>
+<p>我的建议：第一版用 FastAPI + 原生，把「SSE 投影」讲透；React 只作为「同一套 SSE 协议换客户端」的课后延伸。你确认吗？</p>
+<h3 id="4l4-网关放哪">4）L4 网关放哪？</h3>
+<ul>
+<li><strong>同 BFF 进程</strong>：代码最少，真 key 在 BFF 内存里；引擎子进程仍然拿不到。</li>
+<li><strong>独立 <code>gateway.py</code> 进程</strong>（推荐）：隔离更清楚，<code>ps</code> 演示更有说服力，但多一个端口和一份启动脚本。</li>
+</ul>
+<p>我的建议：独立进程。你确认吗？</p>
+<h3 id="5mcp-server-用什么写demo-工具用什么域">5）MCP server 用什么写、demo 工具用什么域？</h3>
+<ul>
+<li><strong>Python + 官方 MCP Python SDK 的 stdio server</strong>（推荐）：和你的 BFF 同语言，40 行以内。</li>
+<li><strong>TypeScript</strong>：更贴近 dsh 插件生态，但多一套 Node 工具链。</li>
+</ul>
+<p>Demo 工具我倾向 <code>get_campaign(campaign_id)</code>，返回 <code>{campaign_id, name, status, spend}</code>，贴近真实业务场景，代入感强。你需要确认：这个假数据字段是否符合你们的口径？还是先用一个中性的 <code>get_weather(city)</code>？</p>
+<hr />
+<h2 id="8-风险与备选">8. 风险与备选</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>概率</th>
+<th>影响</th>
+<th>备选</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SDK 版本与源码仓库不一致，字段/默认配置对不上</td>
+<td>高</td>
+<td>高</td>
+<td>先做 §7 第 2 点的版本拍板；L0 前用 5 分钟预检 <code>pip show</code> / <code>import</code> / 默认 <code>cordis.yml</code></td>
+</tr>
+<tr>
+<td>L3-A 构建失败或超时</td>
+<td>中</td>
+<td>高</td>
+<td>45 分钟硬超时，自动切 L3-B；L3-B 的 MCP server 代码可以原样复用</td>
+</tr>
+<tr>
+<td>L3-B profile 解析不到 <code>@deepseek-ai/dsh-mcp-client</code></td>
+<td>中</td>
+<td>中</td>
+<td>检查 profile 的 <code>package.json</code>/<code>node_modules</code>；用绝对路径或改走 L3-A</td>
+</tr>
+<tr>
+<td>MCP server 启动失败但静默无工具</td>
+<td>中</td>
+<td>中</td>
+<td><code>failOnStartupError: true</code>；L3 验收先看工具列表</td>
+</tr>
+<tr>
+<td>SSE 卡住 / 浏览器断连积压</td>
+<td>中</td>
+<td>中</td>
+<td>队列 <code>maxsize</code>、sentinel、客户端断开时取消生成器</td>
+</tr>
+<tr>
+<td><code>danger-full-access</code> 误伤</td>
+<td>高</td>
+<td>高</td>
+<td>一次性 <code>sandbox/</code>；真 key 不进 workspace；条件允许用容器</td>
+</tr>
+<tr>
+<td>activation token 做成「每请求一次性」导致工具循环 401</td>
+<td>中</td>
+<td>高</td>
+<td>明确「一次 run 一个」；用工具循环做验收</td>
+</tr>
+<tr>
+<td>真 key 被子进程继承</td>
+<td>中</td>
+<td>高</td>
+<td>显式 <code>api_key="act-..."</code> 覆盖；用 <code>ps</code>/环境变量验收</td>
+</tr>
+<tr>
+<td>学员把「Windows 不行」理解成「dsh 永远不行」</td>
+<td>中</td>
+<td>低</td>
+<td>文首和 L0 都写「本教材的 SDK minimal 组合」</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-下一步等你拍板后">9. 下一步（等你拍板后）</h2>
+<ol type="1">
+<li>按 §7 的 5 个点定版本、路线、栈、网关位置、MCP 语言。</li>
+<li>先写 <strong>L0 的 200 字开场 + 验收清单</strong>，拿给你试读；你确认「先给画面」的节奏对了，再展开 60 分钟速览。</li>
+<li>60 分钟速览写完先做一次「同事复述测试」：不看稿讲三分钟，讲不清的地方就是教材要补的画面。</li>
+<li>动手部分按 L0→L1→L2 先跑通，再决定 L3-A/B；不要先写 L4 的网关，否则 L2 的 SSE 还没验证，排错会缠在一起。</li>
+</ol>
+</article>
+<footer>本页由 Markdown 生成。发布版已移除内部机器名与本地绝对路径，其余内容保持原始产出。</footer>
+</div>
+</body>
+</html>

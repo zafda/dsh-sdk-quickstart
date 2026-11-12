@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dsh SDK 快速入门 · 两份规划对比</title>
+<style>
+:root{
+  --bg:#f6f6f3; --paper:#fff; --ink:#16181d; --ink2:#4b5260; --ink3:#8b929e;
+  --line:#e2e4e9; --accent:#2f6df6; --accent-soft:#eaf1ff; --warn:#b45309; --warn-soft:#fff7ed;
+  --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12141a;--paper:#191c24;--ink:#e8eaf0;--ink2:#a8b0c0;--ink3:#6f7889;
+        --line:#282c37;--accent:#5b8dff;--accent-soft:#1c2437;--warn:#f0a35e;--warn-soft:#2a2118;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+.wrap{max-width:920px;margin:0 auto;padding:48px 24px 96px}
+header.hero{margin-bottom:40px}
+.eyebrow{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+h1{font-size:32px;line-height:1.3;margin:0 0 14px;letter-spacing:-.01em}
+.lead{color:var(--ink2);font-size:17px;margin:0 0 24px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.pill{font-size:12.5px;padding:4px 11px;border-radius:999px;background:var(--paper);
+  border:1px solid var(--line);color:var(--ink2)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:32px 0 44px}
+@media(max-width:720px){.cards{grid-template-columns:1fr}}
+a.card{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;transition:.16s ease}
+a.card:hover{border-color:var(--accent);transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,.07)}
+.card .who{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.card .t{font-size:19px;font-weight:650;line-height:1.4}
+.card .d{font-size:14.5px;color:var(--ink2);margin:0}
+.card .go{margin-top:auto;padding-top:12px;font-size:14px;color:var(--accent);font-weight:600}
+h2{font-size:22px;margin:44px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:28px 0 10px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;
+  background:var(--paper);border-radius:var(--radius);overflow:hidden}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--accent-soft);font-weight:650;font-size:13.5px;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+td:first-child{white-space:nowrap}
+code{font-family:var(--mono);font-size:.88em;background:var(--accent-soft);
+  padding:2px 6px;border-radius:5px}
+.note{background:var(--warn-soft);border-left:3px solid var(--warn);
+  padding:14px 18px;border-radius:0 var(--radius) var(--radius) 0;margin:20px 0;font-size:15px}
+.note strong{color:var(--warn)}
+ul{padding-left:22px}li{margin:6px 0}
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--ink3)}
+/* article */
+article{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:40px 44px}
+@media(max-width:720px){article{padding:26px 20px}}
+article h1{font-size:28px;margin-top:0}
+article h2{font-size:21px;margin-top:36px}
+article h3{font-size:17px}
+article table{font-size:13.5px}
+article pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.6}
+article pre code{background:none;padding:0}
+article blockquote{margin:16px 0;padding:10px 18px;border-left:3px solid var(--line);
+  color:var(--ink2);background:var(--bg);border-radius:0 8px 8px 0}
+.back{display:inline-block;margin-bottom:22px;font-size:14px;color:var(--accent);
+  text-decoration:none;font-weight:600}
+.back:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--line);margin:32px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">DeepSeek Harness · SDK</div>
+  <h1>dsh SDK 快速入门<br>两份独立规划</h1>
+  <p class="lead">同一个任务书，分别交给两个 agent 独立执行，互不知晓对方存在。两份产出的路线骨架一致，分歧集中在 L3 的可行性与篇幅密度上。</p>
+  <div class="meta">
+    <span class="pill">2026-11-13</span>
+    <span class="pill">任务书：1 小时速览 + 五阶段动手</span>
+    <span class="pill">参考项目 StaffDeck</span>
+  </div>
+</header>
+
+<div class="cards">
+  <a class="card" href="codex.html">
+    <span class="who">Codex</span>
+    <span class="t">大纲计划</span>
+    <p class="d">27KB。7 章速览约 3,400 字，五阶段实操共 195 分钟。节奏紧凑，每阶段给出目标、现象、代码预算和验收。</p>
+    <span class="go">读这一份 →</span>
+  </a>
+  <a class="card" href="dsh.html">
+    <span class="who">dsh headless</span>
+    <span class="t">教学规划（明细）</span>
+    <p class="d">52KB / 681 行。7 章速览约 7,900 字，含每章视觉锚点、六个固定坑、每阶段复述题，以及 L3 的 A/B 两条可跑路线。</p>
+    <span class="go">读这一份 →</span>
+  </a>
+</div>
+
+<h2>核心分歧</h2>
+
+<table>
+<thead><tr><th>维度</th><th>Codex</th><th>dsh</th></tr></thead>
+<tbody>
+<tr><td>速览篇幅</td><td>3,400 字 / 7 章</td><td>7,900 字 / 7 章（每章带视觉锚点）</td></tr>
+<tr><td>总时长</td><td>290 分钟（含排障 25′）</td><td>240 分钟 A 路线 / 210 分钟 B 路线</td></tr>
+<tr><td>L3 MCP</td><td>只标注「作者须先验证」，未给解法</td><td>给出 A（自建 runtime）与 B（dsh 侧车）两条可跑路线 + 45 分钟硬超时</td></tr>
+<tr><td>版本基线</td><td>标注差异，仍按源码版本规划</td><td>明确提出需要先装一份目标版本实测</td></tr>
+<tr><td>前端栈</td><td>原生 HTML/JS（建议）</td><td>FastAPI + 原生 + EventSource（建议）</td></tr>
+<tr><td>待拍板项</td><td>3 个</td><td>5 个</td></tr>
+<tr><td>额外交付</td><td>自带一页 HTML 审核页</td><td>六个固定坑、每阶段复述题、降级方案</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<strong>两边独立得出同一个阻塞点：</strong>SDK 捆绑运行时的依赖清单里没有 <code>@deepseek-ai/dsh-mcp-client</code>。
+也就是说，光在 <code>cordis.yml</code> 里加一行配置，MCP 插件加载不出来——需要重新构建运行时。
+</div>
+
+<h2>共同骨架</h2>
+<ul>
+  <li><strong>三条接缝</strong>：控制面（stdio JSON-RPC）、模型面（本地网关 + activation token）、工具面（自挂 MCP server）</li>
+  <li><strong>五阶段连续长大</strong>：L0 跑通 → L1 看见事件流 → L2 长出 SSE 页面 → L3 换自己的工具 → L4 摘掉真 key</li>
+  <li><strong>终态</strong>：一个本地页面 + 真实流式输出 + 一个只读 MCP 工具 + 真 key 不进引擎进程</li>
+  <li><strong>只借 StaffDeck 的三个接口分界线</strong>，不借它 12 万行的体量</li>
+</ul>
+
+<footer>
+发布版已移除内部机器名与本地绝对路径，其余内容保持原样。
+</footer>
+</div>
+</body>
+</html>
